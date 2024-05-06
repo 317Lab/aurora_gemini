@@ -31,3 +31,4 @@ for env = envs
 end
 
 fclose all;
+clear('envs','env','env_path','filename','fid','ans');

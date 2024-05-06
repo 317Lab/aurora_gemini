@@ -192,7 +192,7 @@ if options.plot
     shadow(in0) = 0;
     shadow(in1) = 0;
 
-    colorcet = @jules.tools.colorcet;
+    colorcet = @aurogem.tools.colorcet;
     
     % close all
     figure(1)

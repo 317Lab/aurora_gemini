@@ -4,7 +4,7 @@
 %   "joule", "multi", or "all" for plotting every option.
 %
 % Example usage:
-%   jules.plot.run('..\public_html\Gemini3D\<sim_name>')
+%   aurogem.plot.run('..\public_html\Gemini3D\<sim_name>')
 %
 % Arguments (All options are in gemini units):
 %   direc                   gemini run directory
@@ -26,8 +26,8 @@
 %   matlab R2022a or higher
 %   gemini3d (github.com/gemini3d/mat_gemini)
 %   gemscr (github.com/gemini3d/mat_gemini-scripts)
-%   jules.tools.load_conductances
-%   jules.tools.hsv_params
+%   aurogem.tools.load_conductances
+%   aurogem.tools.hsv_params
 %   Statistics and Machine Learning Toolbox
 %   colorcet (colorcet.holoviz.org)
 %
@@ -78,7 +78,7 @@ scl.U = 1e+3; unt.U = 'mW/m^2'; clm.U = 'L19';
 scl.v = 1e-3; unt.v = 'km/s';   clm.v = 'D2';
 scl.x = 1e-3; unt.x = 'km';
 
-colorcet = @jules.tools.colorcet;
+colorcet = @aurogem.tools.colorcet;
 
 fts = 8; % fontsize
 ftn = 'Consolas'; % fontname (use monospaced fonts for better videos)
@@ -177,7 +177,7 @@ for UTsec = UTsec0+start:cad:UTsec0+stop
     phi = dat.Phitop;
     [E1,E2,E3] = gemscr.postprocess.pot2field(xg,phi);
     [jP_3,jH_3,~] = gemscr.postprocess.current_decompose(xg,dat);
-    [sigP,sigH,SIGP,SIGH] = jules.tools.load_conductances(direc,time,dat,cfg,xg);
+    [sigP,sigH,SIGP,SIGH] = aurogem.tools.load_conductances(direc,time,dat,cfg,xg);
     
     % add background electric fields
     E0_UTsecs = UTsec0 + (0:dtE0:tdur);
@@ -232,7 +232,7 @@ for UTsec = UTsec0+start:cad:UTsec0+stop
 
     % hsv plot variables
     [hsv_map_clb,hsv_mlon,hsv_mlon_map,hsv_alt,hsv_alt_map] =...
-        jules.tools.hsv_params(v2,v3,MLAT,MLON,ALT,alt_ref,mlon_ref,hsv_sat);
+        aurogem.tools.hsv_params(v2,v3,MLAT,MLON,ALT,alt_ref,mlon_ref,hsv_sat);
 
     % precipitation variables
     prec_UTsecs = UTsec0 + (0:dtprec:tdur);

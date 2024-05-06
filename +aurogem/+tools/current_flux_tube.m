@@ -211,7 +211,7 @@ if opts.do_plot
     fac(in | out) = nan;
     fac = repmat(fac,[1,1,lz]);
 
-    colorcet = @jules.tools.colorcet;
+    colorcet = @aurogem.tools.colorcet;
     lim.x = [min(x),max(x)];
     lim.y = [min(y),max(y)];
     lim.z = [min(z),max(z)];

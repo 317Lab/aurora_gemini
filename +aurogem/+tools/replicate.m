@@ -68,11 +68,11 @@ set(0,'defaultSurfaceEdgeColor','flat')
 set(0,'defaultLineLineWidth',lw)
 set(0,'defaultScatterLineWidth',lw)
 set(0,'defaultQuiverLineWidth',lw*0.7)
-jules.tools.setall(0,'FontName',ftn)
-jules.tools.setall(0,'FontSize',fts)
-jules.tools.setall(0,'Multiplier',1)
+aurogem.tools.setall(0,'FontName',ftn)
+aurogem.tools.setall(0,'FontSize',fts)
+aurogem.tools.setall(0,'Multiplier',1)
 
-colorcet = @jules.tools.colorcet;
+colorcet = @aurogem.tools.colorcet;
 
 scl.x = 1e-3; scl.v = 1e-3; scl.dv = 1e3; scl.p = 1e-3;
 unt.x = 'km'; unt.v = 'km/s'; unt.dv = 'mHz'; unt.p = 'kV';
@@ -176,14 +176,14 @@ end
 
 %% calculate boundaries
 num_bounds = 2;
-edges = jules.tools.find_max_edges(arc,theta=0);
+edges = aurogem.tools.find_max_edges(arc,theta=0);
 bsw = opts.boundary_smoothing_window;
 fprintf('Boundary smoothing window is approximatly %.0f meters.\n', ...
     mean(dx3)*double(bsw))
 if strcmp(opts.edge_method,'sobel')
     bounds = nan(num_bounds,size(edges,1));
     for i = 1:size(edges,1)
-        [~,bounds(:,i)] = jules.tools.peak_detect(edges(i,:), ...
+        [~,bounds(:,i)] = aurogem.tools.peak_detect(edges(i,:), ...
             num=num_bounds,smoothness=0.009);
     end
     x2_bounds_A = sort(x2_imag(2:end-1));
@@ -193,7 +193,7 @@ if strcmp(opts.edge_method,'sobel')
 elseif strcmp(opts.edge_method,'contour')
     if all(isnan(opts.contour_values))
         edge_id = round(size(edges,1)/2);
-        [~,cntr_ids] = jules.tools.peak_detect(edges(edge_id,:), ...
+        [~,cntr_ids] = aurogem.tools.peak_detect(edges(edge_id,:), ...
             num=num_bounds,smoothness=0.009);
         cntr_vals = arc(edge_id,cntr_ids);
     else
@@ -206,17 +206,17 @@ elseif strcmp(opts.edge_method,'contour')
         cntr_A(1,1)^ap*scl.arc,unt.arc)
     fprintf('Secondary contour line at %.2f %s\n', ...
         cntr_B(1,1)^ap*scl.arc,unt.arc)
-    [x2_bounds_A,x3_bounds_A] = jules.tools.get_contour(cntr_A,rank=2);
-    [x2_bounds_B,x3_bounds_B] = jules.tools.get_contour(cntr_B,rank=1);
+    [x2_bounds_A,x3_bounds_A] = aurogem.tools.get_contour(cntr_A,rank=2);
+    [x2_bounds_B,x3_bounds_B] = aurogem.tools.get_contour(cntr_B,rank=1);
     x2_bounds_A = smoothdata(x2_bounds_A,"gaussian");
     x3_bounds_A = smoothdata(x3_bounds_A,"gaussian",bsw);
     x2_bounds_B = smoothdata(x2_bounds_B,"gaussian");
     x3_bounds_B = smoothdata(x3_bounds_B,"gaussian",bsw);
     [~,sort_ids_A] = sort(x2_bounds_A);
     [~,sort_ids_B] = sort(x2_bounds_B);
-    x2_bounds_A = jules.tools.minsmooth(x2_bounds_A(sort_ids_A));
+    x2_bounds_A = aurogem.tools.minsmooth(x2_bounds_A(sort_ids_A));
     x3_bounds_A = x3_bounds_A(sort_ids_A);
-    x2_bounds_B = jules.tools.minsmooth(x2_bounds_B(sort_ids_B));
+    x2_bounds_B = aurogem.tools.minsmooth(x2_bounds_B(sort_ids_B));
     x3_bounds_B = x3_bounds_B(sort_ids_B);
 end
 
@@ -394,7 +394,7 @@ for track_id = 1:num_tracks
     % 0 = original, 1 = replicated, a = primary boundary, b = secondary boundary
     % minmooth needed for unique independent input of griddedinterpolant
     % position where original trajectory meets primary boundary
-    traj0 = griddedInterpolant(jules.tools.minsmooth(x2_traj(sort_ids)), ...
+    traj0 = griddedInterpolant(aurogem.tools.minsmooth(x2_traj(sort_ids)), ...
         x3_traj(sort_ids));
     
     x0a = fzero(@(x)(traj0(x)-bound.A(x)),0);
@@ -459,7 +459,7 @@ for track_id = 1:num_tracks
     
         % determine width at position 1
         % position where replicated trajectory meets primary boundary
-        traj1 = griddedInterpolant(jules.tools.minsmooth(x2_traj_tra(sort_ids)), ...
+        traj1 = griddedInterpolant(aurogem.tools.minsmooth(x2_traj_tra(sort_ids)), ...
             x3_traj_tra(sort_ids));
         x1a = fzero(@(x)(traj1(x)-bound.A(x)),0);
         y1a = traj1(x1a);
@@ -755,7 +755,7 @@ Edata = [E2_int(mask),E3_int(mask)];
 
 if opts.fit_harmonic
     fprintf('Fitting harmonic function.\n')
-    [phi,~] = jules.tools.find_harmonic(phi0,xdata,Edata,xg);
+    [phi,~] = aurogem.tools.find_harmonic(phi0,xdata,Edata,xg);
 else
     [E2_0,E3_0] = gradient(-phi0,mean(dx2),mean(dx3));
     E_0 = mean([E2_0(:);E3_0(:)])-mean([E2_int(:),E3_int(:)]);
@@ -1034,9 +1034,9 @@ if opts.show_plots || opts.save_plots(3)
     hsv_sat = 1e3;
     eps = 0.02;
     [hsv_map_clb,~,~,hsv_alt,hsv_alt_map] = ...
-        jules.tools.hsv_params(V2,V3,MLAT,MLON,ALT,300e3,mlon_ref,hsv_sat);
+        aurogem.tools.hsv_params(V2,V3,MLAT,MLON,ALT,300e3,mlon_ref,hsv_sat);
     [hsv_map_clb_err,~,~,hsv_alt_err,hsv_alt_map_err] = ...
-        jules.tools.hsv_params(V2_err,V3_err,MLAT,MLON,ALT,300e3,mlon_ref,hsv_sat*0.3);
+        aurogem.tools.hsv_params(V2_err,V3_err,MLAT,MLON,ALT,300e3,mlon_ref,hsv_sat*0.3);
 
     if opts.auto_lim
         qnt = 0.99;

@@ -12,7 +12,7 @@ arguments
 end
 
 if opts.plot
-    jules.sim.plot(direc...
+    aurogem.sim.plot(direc...
         ,start = opts.start...
         ,stop = opts.stop...
         ,cad = opts.cad...
@@ -25,7 +25,7 @@ if opts.video
     plots_dirs = dir(fullfile(direc,'plots'));
     for i = 3:length(plots_dirs)
         plots_name = plots_dirs(i).name;
-        jules.tools.images2video(direc,fullfile('plots',plots_name))
+        aurogem.tools.images2video(direc,fullfile('plots',plots_name))
     end
 end
 

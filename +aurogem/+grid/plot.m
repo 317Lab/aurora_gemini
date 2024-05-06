@@ -42,11 +42,11 @@ earth_z = RE*earth_z;
 lim.lon = opts.lon_lim;
 lim.lat = opts.lat_lim;
 if opts.plot_alaska
-    shp.usa = shaperead('+jules/+grid/map_data/gadm41_USA_1.shp');
+    shp.usa = shaperead('+aurogem/+grid/map_data/gadm41_USA_1.shp');
     [map_usa_x,map_usa_y,map_usa_z] = map(shp.usa,lim,RE);
 end
 if opts.plot_canada
-    shp.cad = shaperead('+jules/+grid/map_data/gadm41_CAN_1.shp');
+    shp.cad = shaperead('+aurogem/+grid/map_data/gadm41_CAN_1.shp');
     [map_cad_x,map_cad_y,map_cad_z] = map(shp.cad,lim,RE);
 end
 
@@ -72,9 +72,9 @@ ftn = 'Arial';
 
 reset(0)
 set(0,'defaultFigurePaperUnits','inches')
-jules.tools.setall(0,'FontName',ftn)
-jules.tools.setall(0,'FontSize',fts)
-jules.tools.setall(0,'Multiplier',1)
+aurogem.tools.setall(0,'FontName',ftn)
+aurogem.tools.setall(0,'FontSize',fts)
+aurogem.tools.setall(0,'Multiplier',1)
 set(0,'defaultAxesFontSizeMode','manual')
 set(0,'defaultSurfaceEdgeColor','flat')
 

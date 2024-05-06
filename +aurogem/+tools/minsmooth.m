@@ -9,7 +9,8 @@ end
         return
     end
     if any(diff(x) < 0)
-        error('jules:tools:minsmooth:inputError','List not monotonically')
+        error('aurogem:tools:minsmooth:inputError' ...
+            ,'List not monotonically increasing')
     end
     while not(is_unique)
         w = w+1;

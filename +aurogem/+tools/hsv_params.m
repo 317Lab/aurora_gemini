@@ -81,7 +81,7 @@ assert(cnd,'First 5 arguments must all have equal sizes.')
 % pcolor then plots linspace(0,1,M*N) reshaped to an M by N plot
 ang = (1+atan2(v3,v2)./pi)/2; % 0/1 = west, 0.25 = south, 0.5 = east, etc.
 mag = min(sqrt(v2.^2+v3.^2)/hsv_sat,1); % saturated flow magnitude
-hsv_map_clb = jules.tools.colorcet('C2','shift',63/256); % shifted for blue is west
+hsv_map_clb = aurogem.tools.colorcet('C2','shift',63/256); % shifted for blue is west
 hsv_tmp = rgb2hsv(hsv_map_clb(round(1+255*ang),:)); % map angles to rgb to hsv
 hsv_tmp(:,2) = hsv_tmp(:,2).*mag(:); % scale saturation by flow magnitude
 hsv_tmp(:,3) = (hsv_tmp(:,3)-1).*mag(:)+1; % mag=1 gives initial hsv value, mag=0 gives value of 1

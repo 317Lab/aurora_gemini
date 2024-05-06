@@ -11,7 +11,7 @@ gem_root = getenv('GEMINI_ROOT');
 mat_root = getenv('GEMINI_MAT_ROOT');
 scr_root = getenv('GEMINI_SCR_ROOT');
 sim_root = getenv('GEMINI_SIM_ROOT');
-jules_root = getenv('JULES_ROOT');
+aurogem_root = getenv('AUROGEM_ROOT');
 
 assert(~isempty(gem_root), ...
     ['Add environment variable GEMINI_ROOT directing to contents of ' ...
@@ -24,9 +24,9 @@ assert(~isempty(scr_root), ...
     'https://github.com/gemini3d/mat_gemini-scripts'])
 assert(~isempty(sim_root), ...
     'Add environment variable GEMINI_SIM_ROOT directing to gemini simulations')
-assert(~isempty(jules_root), ...
-    ['Add environment variable JULES_ROOT directing to contents of ' ...
-    'https://github.com/julesvanirsel/thesis'])
+assert(~isempty(aurogem_root), ...
+    ['Add environment variable AUROGEM_ROOT directing to contents of ' ...
+    'https://github.com/317Lab/aurora_gemini'])
 
 if any(direc(end)=='/\')
     direc = direc(1:end-1);
@@ -38,7 +38,7 @@ script_fn = 'batch.script';
 batch_cmd = '#SBATCH';
 mpi_cmd = 'mpiexec';
 gemini_bin = fullfile(gem_root,'build','gemini.bin');
-matlab_cmd = sprintf('jules.sim.process(''%s'')',direc);
+matlab_cmd = sprintf('aurogem.sim.process(''%s'')',direc);
 
 % check even division of cpus into horizontal cells
 grid_size_fn = fullfile(direc,'inputs','simsize.h5');
@@ -53,8 +53,8 @@ end
 % check even division of cpus/nodes into horizontal cells
 n_nodes = opts.num_nodes;
 cpus_per_node = opts.num_cpus_per_node;
-[n_nodes_x2,n_nodes_x3] = jules.tools.nearest_factors(n_nodes);
-[cpus_per_node_x2,cpus_per_node_x3] = jules.tools.nearest_factors(cpus_per_node);
+[n_nodes_x2,n_nodes_x3] = aurogem.tools.nearest_factors(n_nodes);
+[cpus_per_node_x2,cpus_per_node_x3] = aurogem.tools.nearest_factors(cpus_per_node);
 n_cells = lx2 * lx3;
 n_cpus = double(n_nodes * cpus_per_node);
 cells_per_cpu = n_cells / n_cpus;
@@ -126,7 +126,7 @@ fprintf(fid,'%s %s %s;\\\n',mpi_cmd,gemini_bin,direc);
 fprintf(fid,['matlab -nodisplay -nodesktop -r' ...
     ' "\\\naddpath(''%s'');\\\naddpath(''%s'');\\\naddpath(''%s'');' ...
     '\\\n%s;\\\nexit\\\n"'], ...
-    jules_root,mat_root,scr_root,matlab_cmd);
+    aurogem_root,mat_root,scr_root,matlab_cmd);
 
 fclose(fid);
 end

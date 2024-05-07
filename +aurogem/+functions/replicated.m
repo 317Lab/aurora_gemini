@@ -62,6 +62,7 @@ cfg_rep = gemini3d.read.config(fullfile(fileparts(cfg.nml),'ext'));
 xg_rep = gemini3d.grid.cartesian(cfg_rep);
 [X2_rep,X3_rep] = ndgrid(xg_rep.x2(3:end-2),xg_rep.x3(3:end-2));
 clear('xg_rep')
+fprintf('Interpolation potential onto simulation grid.')
 fphi = griddedInterpolant(X2_rep,X3_rep,phi,'spline');
 phi = fphi(X2,X3);
 

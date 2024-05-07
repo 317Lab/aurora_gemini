@@ -111,4 +111,7 @@ if happy
     h5make(file_phi,'/Boundary/Secondary',bound_scnd,'Secondary arc boundary' ...
         ,units='Meters',size='lxp x 2 (east, north)')
 end
+
+close all
+fclose all;
 end

@@ -772,7 +772,8 @@ end
 try
     phi = smoothdata2(phi,"gaussian",4);
 catch
-    warning('Potential not smoothed. Need version R2023b or higher. Current version = %s\n',version)
+    % warning('Potential not smoothed. Need version R2023b or higher. Current version = %s\n',version)
+    phi = aurogem.tools.smoothdata2(phi,"gaussian",4);
 end
 
 % ensure first and second differences match at north and south edges

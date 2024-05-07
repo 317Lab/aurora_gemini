@@ -79,16 +79,6 @@ assert(round(cells_per_cpu_x3) == cells_per_cpu_x3, ...
     'Cells in x3 (%i) does not divide into number of cpus in x3 (%i)', ...
     cells_per_node_x3 * n_nodes_x3, cpus_per_node_x3 * n_nodes_x3)
 
-% check if input fields on gemini grid
-simsize_fn = fullfile(direc,'inputs','fields','simsize.h5');
-llon = h5read(simsize_fn,'/llon');
-llat = h5read(simsize_fn,'/llat');
-if all([llon,llat] == [lx2,lx3])
-    fprintf('%s grid matches working grid size.\n',simsize_fn)
-    h5write(simsize_fn,'/llon',-1)
-    h5write(simsize_fn,'/llat',-1)
-end
-
 % write batch script
 fid = fopen(fullfile(direc,script_fn),'w');
 

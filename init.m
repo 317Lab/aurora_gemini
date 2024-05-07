@@ -9,6 +9,12 @@ envs = [["GEMINI_ROOT" ...
     ]];
 
 for env = envs
+    env_path = getenv(env(1));
+    if not(isempty(env_path))
+        addpath(fullfile(env_path))
+        fprintf(' %s = %s\n',env(1),env_path)
+        continue
+    end
     filename = fullfile('data','init',env(1));
     fid = fopen(filename,'r');
     if fid == -1

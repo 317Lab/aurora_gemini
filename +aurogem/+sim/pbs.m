@@ -12,7 +12,7 @@ gem_root = getenv('GEMINI_ROOT');
 mat_root = fullfile(filesep,'u',opts.username,'mat_gemini');
 scr_root = fullfile(filesep,'u',opts.username,'mat_gemini-scripts');
 sim_root = getenv('GEMINI_SIM_ROOT');
-aurogem_root = fullfile(filesep,'u',opts.username,'thesis');
+aurogem_root = fullfile(filesep,'u',opts.username,'aurora_gemini');
 
 assert(~isempty(gem_root), ...
     ['Add environment variable GEMINI_ROOT directing to contents of ' ...
@@ -51,7 +51,6 @@ for p = 1:ceil(length(total_cells)/3)-1
 end
 
 % check even division of cpus/nodes into horizontal cells
-% check even division of cpus/nodes into horizontal cells
 n_nodes = opts.num_nodes;
 cpus_per_node = opts.num_cpus_per_node;
 mpis_per_node = cpus_per_node;
@@ -81,16 +80,6 @@ assert(round(cells_per_cpu_x2) == cells_per_cpu_x2, ...
 assert(round(cells_per_cpu_x3) == cells_per_cpu_x3, ...
     'Cells in x3 (%i) does not divide into number of cpus in x3 (%i)', ...
     cells_per_node_x3 * n_nodes_x3, cpus_per_node_x3 * n_nodes_x3)
-
-% check if input fields on gemini grid
-simsize_fn = fullfile(direc,'inputs','fields','simsize.h5');
-llon = h5read(simsize_fn,'/llon');
-llat = h5read(simsize_fn,'/llat');
-if all([llon,llat] == [lx2,lx3])
-    fprintf('%s grid matches working grid size.\n',simsize_fn)
-    h5write(simsize_fn,'/llon',-1)
-    h5write(simsize_fn,'/llat',-1)
-end
 
 % write pbs script
 fid = fopen(fullfile(direc,script_fn),'w');
@@ -124,14 +113,21 @@ for id = [1,fid]
     fprintf(id,'# Number of cells per CPU in x3 = %i\n', cells_per_cpu_x3);
 end
 
-fprintf(fid,'\n# Modules to load:\n');
+fprintf(fid,'\n# MPI commands:\n');
+fprintf(fid,'cd /nobackup/%s\n',opts.username);
+
 fprintf(fid,'module use /nasa/modulefiles/testing\n');
 fprintf(fid,'module load gcc/13.2\n');
 fprintf(fid,'module load openmpi/4.1.6-toss4-gnu\n');
 
-fprintf(fid,'\n# Commands to run:\n');
-fprintf(fid,'cd /nobackup/%s\n',opts.username);
 fprintf(fid,'%s %s %s\n',mpi_cmd,gemini_bin,pfe_path);
+
+fprintf(fid,'module unuse /nasa/modulefiles/testing\n');
+fprintf(fid,'module unload gcc/13.2\n');
+fprintf(fid,'module unload openmpi/4.1.6-toss4-gnu\n');
+
+fprintf(fid,'\n# Other commands:\n');
+fprintf(fid,'module load matlab\n');
 fprintf(fid,['matlab -nodisplay -nodesktop -r' ...
     ' "\\\naddpath(''%s'');\\\naddpath(''%s'');\\\naddpath(''%s'');' ...
     '\\\n%s;\\\nexit\\\n"'], ...

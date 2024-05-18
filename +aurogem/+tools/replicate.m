@@ -74,9 +74,9 @@ aurogem.tools.setall(0,'Multiplier',1)
 
 colorcet = @aurogem.tools.colorcet;
 
-scl.x = 1e-3; scl.v = 1e-3; scl.dv = 1e3; scl.p = 1e-3;
-unt.x = 'km'; unt.v = 'km/s'; unt.dv = 'mHz'; unt.p = 'kV';
-clm.v = 'D2'; clm.dv = 'CBD1'; clm.p = 'D10';
+scl.x = 1e-3; scl.v = 1e-3; scl.dv = 1e3; scl.p = 1e-3; scl.j = 1e6;
+unt.x = 'km'; unt.v = 'km/s'; unt.dv = 'mHz'; unt.p = 'kV'; unt.j = 'uA/m^2';
+clm.v = 'D2'; clm.dv = 'CBD1'; clm.p = 'D10'; clm.j = 'D1A';
 lim.x = [-1,1]*125; lim.y = [-1,1]*59;  lim.v = [-1,1]*1.3; lim.dv = [-1,1]*0.1;
 
 scl.vec = 12*scl.v;
@@ -222,10 +222,7 @@ end
 
 bound.A = griddedInterpolant(x2_bounds_A,x3_bounds_A);
 bound.B = griddedInterpolant(x2_bounds_B,x3_bounds_B);
-angle = griddedInterpolant(x2_bounds_A(2:end), ...
-    atan2(diff(x3_bounds_A)',diff(x2_bounds_A)));
-bound_pts = linspace(min(x2_imag),max(x2_imag),length(x2_imag));
-
+bound_pts = linspace(min(x2_imag)*1.1,max(x2_imag)*1.1,length(x2_imag));
 if opts.swap_primary
     bound_A_tmp = bound.A;
     bound.A = bound.B;
@@ -234,6 +231,18 @@ end
 if opts.save_data
     save('data\boundaries.mat','bound')
 end
+
+angle = griddedInterpolant(bound_pts(1:end-1), ...
+    atan2(smoothdata(diff(bound.A(bound_pts)),"loess") ...
+    ,diff(bound_pts)));
+% figure(98)
+% hold on
+% plot(bound_pts/1e3,bound.A(bound_pts)/1e3)
+% plot(bound_pts/1e3,bound.B(bound_pts)/1e3)
+% plot(bound_pts/1e3,10*rad2deg(angle(bound_pts)))
+% plot(bound_pts(1:end-1)/1e3,10*rad2deg(atan2(diff(bound.A(bound_pts)),diff(bound_pts))))
+% xlim([min(x2),max(x2)]/1e3)
+% error('aa')
 
 if opts.show_plots || opts.save_data
     figure
@@ -809,6 +818,9 @@ v2 = -E3'/Bmag;
 v3 =  E2'/Bmag;
 divv = divergence(X3,X2,v3,v2);
 divv_int = divergence(X3,X2,v3_int,v2_int);
+divE = divergence(X3,X2,E3',E2');
+fSIGP = griddedInterpolant(X2_imag,X3_imag,SIGP);
+fac_divE = fSIGP(X2,X3).*divE;
 v2_err = v2-v2_int;
 v3_err = v3-v3_int;
 
@@ -891,9 +903,11 @@ if opts.show_plots || opts.save_plots(2)
         max_v = quantile(abs([v2(:)+v_bg(1);v3(:)+v_bg(2)]),qnt);
         max_dv = quantile(abs([divv(:);divv_int(:)]),qnt);
         max_p = quantile(abs(phi(:)),qnt);
+        max_j = quantile(abs(fac_divE(:)),qnt);
         lim.v = [-1,1]*max_v*scl.v;
         lim.dv = [-1,1]*max_dv*scl.dv;
         lim.p = [-1,1]*max_p*scl.p;
+        lim.j = [-1,1]*max_j*scl.j;
     end
 
     % row 1
@@ -983,7 +997,7 @@ if opts.show_plots || opts.save_plots(2)
     colormap(gca,colorcet(clm.dv))
     clb = colorbar;
     clb.Label.String = sprintf('\\nabla\\cdot\\bfv\\rm (%s)',unt.dv);
-    clb.Location = 'westoutside';
+    clb.Location = 'southoutside';
     xlim(lim.x); ylim(lim.y); clim(lim.dv)
     xlabel(lbl.x); ylabel(lbl.y)
     pbaspect(ar)
@@ -991,9 +1005,12 @@ if opts.show_plots || opts.save_plots(2)
     nexttile
     text(0.04,0.9,char(ltr),'units','normalized','FontSize',fts*0.8); ltr = ltr+1;
     hold on
-    pcolor(X2*scl.x,X3*scl.x,divv*scl.dv)
-    colormap(gca,colorcet(clm.dv))
-    xlim(lim.x); ylim(lim.y); clim(lim.dv)
+    pcolor(X2*scl.x,X3*scl.x,fac_divE*scl.j)
+    colormap(gca,colorcet(clm.j))
+    clb = colorbar;
+    clb.Label.String = sprintf('\\Sigma_P\\nabla\\cdot\\bfE\\rm (%s)',unt.j);
+    clb.Location = 'southoutside';
+    xlim(lim.x); ylim(lim.y); clim(lim.j)
     yticks([])
     xlabel(lbl.x)
     pbaspect(ar)
@@ -1005,6 +1022,7 @@ if opts.show_plots || opts.save_plots(2)
     colormap(gca,colorcet(clm.p))
     clb = colorbar;
     clb.Label.String = sprintf('Potential (%s)',unt.p);
+    clb.Location = 'southoutside';
     xlim(lim.x); ylim(lim.y);
     yticks([])
     xlabel(lbl.x)
@@ -1044,9 +1062,11 @@ if opts.show_plots || opts.save_plots(3)
         max_v = quantile(abs([v2(:)+v_bg(1);v3(:)+v_bg(2)]),qnt);
         max_dv = quantile(abs([divv(:);divv_int(:)]),qnt);
         max_p = quantile(abs(phi(:)),qnt);
+        max_j = quantile(abs(fac_divE(:)),qnt);
         lim.v = [-1,1]*max_v*scl.v;
         lim.dv = [-1,1]*max_dv*scl.dv;
         lim.p = [-1,1]*max_p*scl.p;
+        lim.j = [-1,1]*max_j*scl.j;
     end
 
     nexttile

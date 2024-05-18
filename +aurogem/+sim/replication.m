@@ -1,6 +1,7 @@
-function replication(direc)
+function replication(direc,opts)
 arguments
     direc (1,:) char {mustBeFolder}
+    opts.track (1,1) char = '_'
 end
 
 direc = fullfile(direc,'ext');
@@ -37,6 +38,14 @@ for n = 1:num_tracks
     tmp.flow(:,2) = h5read(file_track,['/',ltr,'/Flow/Magnetic/North']);
     tracks.(ltr) = tmp;
     clear('tmp')
+end
+
+if not(strcmp(opts.track,'_'))
+    try
+        tracks = tracks.(opts.track);
+    catch
+        error('Invalid track option.')
+    end
 end
 
 % 

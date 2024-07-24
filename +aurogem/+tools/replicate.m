@@ -2,22 +2,19 @@
 %   aaa
 %
 % Example usage:
-%   phi = replicate()
+%   [phi,resnorm,E2_bg,E3_bg,v2_int,v3_int,weight0,bound] = replicate(track,image,xg,opts)
 %
 % Arguments:
-%   track
-%   image
-%   xg
-%
-% Dependencies:
-%   matlab R2022a or higher
-%   gemini3d
-%   colorcet
+%   aaa
 %
 % Contact:
 %   jules.van.irsel.gr@dartmouth.edu
+%
+% Revisions:
+%   07/23/2024  initial implementation (jvi)
+%
 
-function [phi,resnorm,E2_bg,E3_bg,v2_int,v3_int,weight_A,bound] = replicate(track,image,xg,opts)
+function [phi,resnorm,E2_bg,E3_bg,v2_int,v3_int,weight0,bound] = replicate(track,image,xg,opts)
 arguments
     track (1,1) struct {mustBeNonempty}
     image (1,1) struct {mustBeNonempty}
@@ -29,7 +26,7 @@ arguments
     opts.flow_smoothing_window (1,1) int32 {mustBePositive} = 1
     opts.do_rotate (1,1) logical = true
     opts.do_scale (1,1) logical = true
-    opts.arc_definition {mustBeMember(opts.arc_definition,["conductance","flux"])} = "conductance"
+    opts.arc_definition {mustBeMember(opts.arc_definition,["conductance","Pedersen","Hall","flux"])} = "Pedersen"
     opts.edge_method {mustBeMember(opts.edge_method,["contour","sobel"])} = "contour"
     opts.contour_values (1,2) double = [nan,nan]
     opts.boundary_smoothing_window (1,1) int32 {mustBePositive} = 1
@@ -40,10 +37,10 @@ arguments
     opts.add_phi_background (1,1) logical = false
     opts.plot_bg (1,1) logical = false
     opts.show_plots (1,1) logical = false
-    opts.save_plots (1,3) logical = false(3,1)
+    opts.save_plots (1,4) logical = false(1,4)
     opts.save_data (1,1) logical = false
     opts.auto_lim (1,1) logical = true
-    opts.direc (1,:) char {mustBeFolder} = 'plots'
+    opts.direc_out (1,:) char {mustBeFolder} = 'output'
     opts.suffix (1,:) char = ''
     opts.starting_letter (1,1) char = 'A'
 end
@@ -76,7 +73,7 @@ colorcet = @aurogem.tools.colorcet;
 
 scl.x = 1e-3; scl.v = 1e-3; scl.dv = 1e3; scl.p = 1e-3; scl.j = 1e6;
 unt.x = 'km'; unt.v = 'km/s'; unt.dv = 'mHz'; unt.p = 'kV'; unt.j = 'uA/m^2';
-clm.v = 'D2'; clm.dv = 'CBD1'; clm.p = 'D10'; clm.j = 'D1A';
+clm.v = 'D2'; clm.dv = 'CBD1'; clm.p = 'D10'; clm.j = 'D1A'; clm.w = 'L6';
 lim.x = [-1,1]*125; lim.y = [-1,1]*59;  lim.v = [-1,1]*1.3; lim.dv = [-1,1]*0.1;
 
 scl.vec = 12*scl.v;
@@ -86,6 +83,7 @@ lbl.y = sprintf('Mag. N (%s)',unt.x);
 lbl.vx = sprintf('v_E (%s)',unt.v);
 lbl.vy = sprintf('v_N (%s)',unt.v);
 
+fid = fopen(fullfile(opts.direc_out,'output.txt'),'w');
 if not(isempty(opts.suffix))
     opts.suffix = ['_',opts.suffix];
 end
@@ -93,7 +91,7 @@ end
 %% unpack grid
 if opts.upsample > 1
     n_us = opts.upsample;
-    fprintf('Upsampling grid by a factor of %i.\n',n_us)
+    for i=[1,fid]; fprintf(i,'Upsampling grid by a factor of %i.\n',n_us); end
     theta_tmp = linspace(max(xg.theta(1,1,:)),min(xg.theta(1,1,:)),xg.lx(3)*n_us);
     phi_tmp = linspace(min(xg.phi(1,:,1)),max(xg.phi(1,:,1)),xg.lx(2)*n_us);
     xg_us.theta = permute(repmat(theta_tmp,[xg.lx(1),1,xg.lx(2)*n_us]),[1,3,2]);
@@ -143,28 +141,37 @@ assert(isequal(size(image.pos,1:2),size(image.flux)), ...
     'image.flux and image.pos(:,:,1) must have equal sizes.')
 assert(size(image.pos,3)==2, ...
     'Third dimension of image.pos must be 2.')
-assert(issorted(opts.contour_values), ...
-    'Contour values must be in ascending order.')
+% assert(issorted(opts.contour_values), ...
+%     'Contour values must be in ascending order.')
 
 Q = image.flux;
 E0 = image.energy;
-if isfield(image,'pedersen')
-    fprintf('Pedersen conductance found.\n')
+if all(isfield(image,'pedersen'),isfield(image,'hall'))
+    for i=[1,fid]; fprintf(i,'Pedersen and Hall conductances found.\n'); end
     SIGP = image.pedersen;
+    SIGH = image.hall;
 else
     Ebar = E0/1e3;
     SIGP = 40*Ebar.*sqrt(Q)./(16+Ebar.^2); % Robinson et al. (1987), Eq. (3)
+    SIGH = 0.45*(Ebar^0.85); % Robinson et al. (1987), Eq. (4)
 end
 x2_imag = X2_imag(:,1)';
 x3_imag = X3_imag(1,:);
 
-if strcmp(opts.arc_definition,'conductance')
+if strcmp(opts.arc_definition,'conductance') || strcmp(opts.arc_definition,'Pedersen')
     arc = SIGP.^2;
     ap = 1/2;
     scl.arc = 1e0;
     unt.arc = 'S';
     clm.arc = 'L18';
-    lbl.arc = sprintf('Conductance (%s)',unt.arc);
+    lbl.arc = sprintf('Pedersen conductance (%s)',unt.arc);
+elseif strcmp(opts.arc_definition,'Hall')
+    arc = SIGH.^2;
+    ap = 1/2;
+    scl.arc = 1e0;
+    unt.arc = 'S';
+    clm.arc = 'L18';
+    lbl.arc = sprintf('Hall conductance (%s)',unt.arc);
 elseif strcmp(opts.arc_definition,'flux')
     arc = Q;
     ap = 1;
@@ -178,8 +185,8 @@ end
 num_bounds = 2;
 edges = aurogem.tools.find_max_edges(arc,theta=0);
 bsw = opts.boundary_smoothing_window;
-fprintf('Boundary smoothing window is approximatly %.0f meters.\n', ...
-    mean(dx3)*double(bsw))
+for i=[1,fid]; fprintf(i,'Boundary smoothing window is approximatly %.0f meters.\n', ...
+    mean(dx3)*double(bsw)); end
 if strcmp(opts.edge_method,'sobel')
     bounds = nan(num_bounds,size(edges,1));
     for i = 1:size(edges,1)
@@ -199,15 +206,16 @@ elseif strcmp(opts.edge_method,'contour')
     else
         cntr_vals = opts.contour_values.^(1/ap);
     end
-    cntr_A = contour(X2_imag,X3_imag,arc,[1,1]*cntr_vals(2));
-    cntr_B = contour(X2_imag,X3_imag,arc,[1,1]*cntr_vals(1));
+    cntr_A = contour(X2_imag,X3_imag,arc,[1,1]*cntr_vals(1));
+    cntr_B = contour(X2_imag,X3_imag,arc,[1,1]*cntr_vals(2));
     close(gcf)
-    fprintf('Primary contour line at %.2f %s\n', ...
-        cntr_A(1,1)^ap*scl.arc,unt.arc)
-    fprintf('Secondary contour line at %.2f %s\n', ...
-        cntr_B(1,1)^ap*scl.arc,unt.arc)
-    [x2_bounds_A,x3_bounds_A] = aurogem.tools.get_contour(cntr_A,rank=2);
-    [x2_bounds_B,x3_bounds_B] = aurogem.tools.get_contour(cntr_B,rank=1);
+    for i=[1,fid]; fprintf(i,'Primary contour line at %.2f %s.\n', ...
+        cntr_A(1,1)^ap*scl.arc,unt.arc); end
+    for i=[1,fid]; fprintf(i,'Secondary contour line at %.2f %s.\n', ...
+        cntr_B(1,1)^ap*scl.arc,unt.arc); end
+    min_sep = range(x2_imag)*0.9;
+    [x2_bounds_A,x3_bounds_A] = aurogem.tools.unpack_contours(cntr_A,rank=1,min_sep=min_sep);
+    [x2_bounds_B,x3_bounds_B] = aurogem.tools.unpack_contours(cntr_B,rank=-1,min_sep=min_sep);
     x2_bounds_A = smoothdata(x2_bounds_A,"gaussian");
     x3_bounds_A = smoothdata(x3_bounds_A,"gaussian",bsw);
     x2_bounds_B = smoothdata(x2_bounds_B,"gaussian");
@@ -235,14 +243,6 @@ end
 angle = griddedInterpolant(bound_pts(1:end-1), ...
     atan2(smoothdata(diff(bound.A(bound_pts)),"loess") ...
     ,diff(bound_pts)));
-% figure(98)
-% hold on
-% plot(bound_pts/1e3,bound.A(bound_pts)/1e3)
-% plot(bound_pts/1e3,bound.B(bound_pts)/1e3)
-% plot(bound_pts/1e3,10*rad2deg(angle(bound_pts)))
-% plot(bound_pts(1:end-1)/1e3,10*rad2deg(atan2(diff(bound.A(bound_pts)),diff(bound_pts))))
-% xlim([min(x2),max(x2)]/1e3)
-% error('aa')
 
 if opts.show_plots || opts.save_data
     figure
@@ -295,7 +295,7 @@ if opts.show_plots || opts.save_data
         tmp_fn = '';
     end
     if not(isempty(tmp_fn)) && opts.save_data
-        fprintf('Saving %s\n',tmp_fn)
+        fprintf('Saving %s.\n',tmp_fn)
         save(tmp_fn,'X2_imag','X3_imag','edges','arc','bound','bound_pts', ...
             'scl','clm','lbl','lim','ar','ap')
     end
@@ -311,7 +311,7 @@ if opts.show_plots
 
     nexttile
     hold on
-    contour(X2_imag*scl.x,X3_imag*scl.x,arc.^ap*scl.arc)
+    contour(X2_imag*scl.x,X3_imag*scl.x,arc.^ap*scl.arc,20)
     plot(bound_pts*scl.x,bound.A(bound_pts)*scl.x,'k')
     plot(bound_pts*scl.x,bound.B(bound_pts)*scl.x,'--k')
     colormap(colorcet(clm.arc))
@@ -332,7 +332,7 @@ if isstruct(struct2array(track))
     if num_tracks == 1
         track = tracks.(cell2mat(track_names(1)));
     else
-        fprintf('Multiple tracks.\n')
+        for i=[1,fid]; fprintf(i,'Multiple tracks.\n'); end
     end
 else
     num_tracks = 1;
@@ -348,7 +348,8 @@ for track_id = 1:num_tracks
     if num_tracks ~=1
         track_name = cell2mat(track_names(track_id));
         track = tracks.(track_name);
-        fprintf([pad(sprintf(' Current track = %s ',track_name),80,'both','-'),'\n'])
+        for i=[1,fid]; fprintf(i,[pad(sprintf(' Current track = %s ',track_name) ...
+                ,80,'both','-'),'\n']); end
         title_pfx = sprintf('Track %s: ',track_name);
     else
         title_pfx = '';
@@ -381,7 +382,7 @@ for track_id = 1:num_tracks
     v3_traj = track.flow(:,2);
 
     % extrapolate flow data
-    n_ext = 32;
+    n_ext = 50;
     x3_traj_old = x3_traj;
     fv2 = scatteredInterpolant(x2_traj,x3_traj,v2_traj,'natural','nearest');
     fv3 = scatteredInterpolant(x2_traj,x3_traj,v3_traj,'natural','nearest');
@@ -426,13 +427,14 @@ for track_id = 1:num_tracks
             v2_traj_0a_rot = cos(gamma0)*v2_traj_0a - sin(gamma0)*v3_traj_0a;
             v3_traj_0a_rot = sin(gamma0)*v2_traj_0a + cos(gamma0)*v3_traj_0a;
             v_bg = [v2_traj_0a-v2_traj_0a_rot,v3_traj_0a-v3_traj_0a_rot];
-            fprintf('Background flow %.2f m/s east and %.2f m/s north\n', ...
-                v_bg(1),v_bg(2))
         else
             v_bg = opts.flow_bg;
         end
+        for i=[1,fid]
+            fprintf(i,'Background flow %.2f m/s east and %.2f m/s north.\n', v_bg(1),v_bg(2));
+        end
     end
-    
+
     % smooth flow data
     dx_traj = median(sqrt(diff(x2_traj).^2+diff(x3_traj).^2));
     sample_freq = 1/dx_traj;
@@ -440,7 +442,7 @@ for track_id = 1:num_tracks
         fsm = opts.flow_smoothing_window;
         pass_freq = sample_freq/double(fsm);
     end
-    fprintf('Flow smoothing window is approximatly %.0f meters.\n',1/pass_freq)
+    for i=[1,fid]; fprintf(i,'Flow smoothing window is approximatly %.0f meters.\n',1/pass_freq); end
     v2_traj = smoothdata(v2_traj - v_bg(1),'gaussian',round(sample_freq/pass_freq));
     v3_traj = smoothdata(v3_traj - v_bg(2),'gaussian',round(sample_freq/pass_freq));
     % fv2_traj = griddedInterpolant(x3_traj,v2_traj,'spline');
@@ -528,7 +530,7 @@ for track_id = 1:num_tracks
     
     if opts.show_plots || opts.save_plots(1)
         figure
-        set(gcf,'PaperPosition',[0,0,13.2,5],'Position',ful) %2.4
+        set(gcf,'PaperPosition',[0,0,13.2,5],'Position',ful)
         t = tiledlayout(1,2);
         t.Title.String = sprintf('%sReplication Subset',title_pfx);
         t.Title.FontSize = 1.5*fts;
@@ -591,8 +593,8 @@ for track_id = 1:num_tracks
                 filename = sprintf('replications_%s%s.png' ...
                     ,track_name,opts.suffix);
             end
-            fprintf('Saving %s\n',filename)
-            saveas(gcf,fullfile(opts.direc,filename))
+            fprintf('Saving %s.\n',filename)
+            saveas(gcf,fullfile(opts.direc_out,filename))
         end
     end
     
@@ -612,15 +614,6 @@ for track_id = 1:num_tracks
         xlabel(lbl.y); ylabel(sprintf('Flow (%s)',unt.v))
         legend('Eastward','Northward','Eastward smoothed','Northward smoothed')
         pbaspect(ar)
-    
-        % figure
-        % set(gcf,'Position',ful)
-        % hold on
-        % plot(x3_traj(1:end-1)*scl.x,diff(v2_traj)*scl.v,'r')
-        % plot(x3_traj(1:end-1)*scl.x,diff(v3_traj)*scl.v,'b')
-        % xlabel(lbl.y); ylabel(sprintf('dFlow (%s)',unt.dv))
-        % legend('Eastward','Northward')
-        % pbaspect(ar)
     end
     
     %% interpolate replicated flow data
@@ -674,40 +667,41 @@ end
 if num_tracks > 1
     assert(num_tracks==2,'3 or more tracks TBD.\n')
 
-    track_name_A = cell2mat(track_names(1));
-    track_name_B = cell2mat(track_names(2));
-    x2_A = mlon_to_x2(tracks.(track_name_A).pos(:,1));
-    x3_A = mlat_to_x3(tracks.(track_name_A).pos(:,2));
-    x2_B = mlon_to_x2(tracks.(track_name_B).pos(:,1));
-    x3_B = mlat_to_x3(tracks.(track_name_B).pos(:,2));
-    lA = length(x2_A);
-    lB = length(x2_B);
+    track_name0 = cell2mat(track_names(1));
+    track_name1 = cell2mat(track_names(2));
+    x20 = mlon_to_x2(tracks.(track_name0).pos(:,1));
+    x30 = mlat_to_x3(tracks.(track_name0).pos(:,2));
+    x21 = mlon_to_x2(tracks.(track_name1).pos(:,1));
+    x31 = mlat_to_x3(tracks.(track_name1).pos(:,2));
+    l0 = length(x20);
+    l1 = length(x21);
 
-    distance_A = nan([size(X2),lA]);
-    for i=1:lA
-        distance_A(:,:,i) = sqrt((X2-x2_A(i)).^2+(X3-x3_A(i)).^2);
+    distance0 = nan([size(X2),l0]);
+    for i=1:l0
+        distance0(:,:,i) = sqrt((X2-x20(i)).^2+(X3-x30(i)).^2);
     end
-    distance_B = nan([size(X2),lB]);
-    for i=1:lB
-        distance_B(:,:,i) = sqrt((X2-x2_B(i)).^2+(X3-x3_B(i)).^2);
+    distance1 = nan([size(X2),l1]);
+    for i=1:l1
+        distance1(:,:,i) = sqrt((X2-x21(i)).^2+(X3-x31(i)).^2);
     end
     
-    min_dist_A = min(distance_A,[],3);
-    min_dist_B = min(distance_B,[],3);
+    min_dist0 = min(distance0,[],3);
+    min_dist1 = min(distance1,[],3);
     
     weight_scale = opts.weighting_scale_length;
-    weight_A = (1 + tanh((min_dist_B-min_dist_A)*2/weight_scale))/2;
-    weight_B = 1 - weight_A;
-    fprintf('max weight = %f\n',max(weight_A(:)))
+    weight0 = (1 + tanh((min_dist1-min_dist0)*2/weight_scale))/2;
+    weight0 = aurogem.tools.smoothdata2(weight0,"gaussian",100);
+    weight1 = 1 - weight0;
+    for i=[1,fid]; fprintf(i,'Maximum weight = %f.\n',max(weight0(:))); end
     
-    v2_int_A = interpolations.(track_name_A).v2_int;
-    v3_int_A = interpolations.(track_name_A).v3_int;
-    v2_int_B = interpolations.(track_name_B).v2_int;
-    v3_int_B = interpolations.(track_name_B).v3_int;
-    v2_int = v2_int_A.*weight_A + v2_int_B.*weight_B;
-    v3_int = v3_int_A.*weight_A + v3_int_B.*weight_B;
+    v2_int0 = interpolations.(track_name0).v2_int;
+    v3_int0 = interpolations.(track_name0).v3_int;
+    v2_int1 = interpolations.(track_name1).v2_int;
+    v3_int1 = interpolations.(track_name1).v3_int;
+    v2_int = v2_int0.*weight0 + v2_int1.*weight1;
+    v3_int = v3_int0.*weight0 + v3_int1.*weight1;
 else
-    weight_A = ones(size(X2));
+    weight0 = ones(size(X2));
 end
 
 E2_int =  v3_int*Bmag; % v = ExB/B^2
@@ -794,21 +788,8 @@ phi(:,end-0) = 3*phi(:,end-2)-2*phi(:,end-3);
 % zero average potential
 phi = phi - mean(phi,'all');
 
-% if opts.show_plots
-%     figure
-%     set(gcf,'Position',ful)
-%     hold on
-%     surface(X2*scl.x,X3*scl.x,harm*scl.p)
-%     contour(X2*scl.x,X3*scl.x,double(mask),[0.5,0.5],'k')
-%     colormap(gca,colorcet(clm.p))
-%     clb = colorbar;
-%     clb.Label.String = sprintf('Harmonic potential (%s)',unt.p);
-%     xlim(lim.x); ylim(lim.y);
-%     xlabel(lbl.x); ylabel(lbl.y)
-%     pbaspect([ar(1:2),1e5])
-% end
-
 %% plot final flow fields
+fSIGP = griddedInterpolant(X2_imag,X3_imag,SIGP);
 if range(dx2) < 1e-3
     [E2,E3] = gradient(-phi',mean(dx2),mean(dx3));
 else
@@ -819,7 +800,6 @@ v3 =  E2'/Bmag;
 divv = divergence(X3,X2,v3,v2);
 divv_int = divergence(X3,X2,v3_int,v2_int);
 divE = divergence(X3,X2,E3',E2');
-fSIGP = griddedInterpolant(X2_imag,X3_imag,SIGP);
 fac_divE = fSIGP(X2,X3).*divE;
 v2_err = v2-v2_int;
 v3_err = v3-v3_int;
@@ -835,10 +815,10 @@ resnorm = [ ...
     ,norm(abs(v3_err(mask)))/norm(abs(v3_int(mask))) ...
     ];
 fprintf([pad('Electrostatic enforcement results:',80,'both','-'),'\n'])
-fprintf('Eastward error range = %i to %i m/s\n',v2_err_min,v2_err_max)
-fprintf('Northward error range = %i to %i m/s\n',v3_err_min,v3_err_max)
-fprintf('Eastward relative norm of the residuals = %.2f\n',resnorm(1))
-fprintf('Northward relative norm of the residuals = %.2f\n',resnorm(2))
+for i=[1,fid]; fprintf(i,'Eastward error range = %i to %i m/s.\n',v2_err_min,v2_err_max); end
+for i=[1,fid]; fprintf(i,'Northward error range = %i to %i m/s.\n',v3_err_min,v3_err_max); end
+for i=[1,fid]; fprintf(i,'Eastward relative norm of the residuals = %.2f.\n',resnorm(1)); end
+for i=[1,fid]; fprintf(i,'Northward relative norm of the residuals = %.2f.\n',resnorm(2)); end
 fprintf([pad('',80,'both','-'),'\n'])
 
 figure
@@ -899,7 +879,7 @@ if opts.show_plots || opts.save_plots(2)
     ltr = opts.starting_letter;
 
     if opts.auto_lim
-        qnt = 0.99;
+        qnt = 0.97;
         max_v = quantile(abs([v2(:)+v_bg(1);v3(:)+v_bg(2)]),qnt);
         max_dv = quantile(abs([divv(:);divv_int(:)]),qnt);
         max_p = quantile(abs(phi(:)),qnt);
@@ -1030,8 +1010,8 @@ if opts.show_plots || opts.save_plots(2)
 
     if opts.save_plots(2)
         filename = sprintf('replicated_full%s.png',opts.suffix);
-        fprintf('Saving %s\n',filename)
-        saveas(gcf,fullfile(opts.direc,filename))
+        fprintf('Saving %s.\n',filename)
+        saveas(gcf,fullfile(opts.direc_out,filename))
     end
 end
 
@@ -1071,13 +1051,13 @@ if opts.show_plots || opts.save_plots(3)
 
     nexttile
     title('Input flow')
-    text(0.04,0.9,char(ltr),'units','normalized','FontSize',fts*0.8,'Color','w'); ltr = ltr +1;
+    text(0.04,0.9,char(ltr),'units','normalized','FontSize',fts*0.8,'Color','w'); ltr = ltr+1;
     hold on
     pcolor(X2*scl.x,X3*scl.x,hsv_alt);
     quiver(x2_traj_p*scl.x,x3_traj_p*scl.x,v2_traj_pv,v3_traj_pv,0,'.-r')
     quiver(60,-51,1e3*scl.vec,0,0,'.-r')
     text(75,-50,'1 km/s','FontSize',0.8*fts,'Color','w')
-    contour(X2_imag*scl.x,X3_imag*scl.x,arc.^ap*scl.arc,4,'--k')%,'Color',[1,1,1]*0.4)
+    contour(X2_imag*scl.x,X3_imag*scl.x,arc.^ap*scl.arc,4,'--k')
     colormap(gca,hsv_alt_map)
     clb = colorbar;
     colormap(clb,hsv_map_clb)
@@ -1093,7 +1073,7 @@ if opts.show_plots || opts.save_plots(3)
 
     nexttile
     title('Input - interpolated flow')
-    text(0.04,0.9,char(ltr),'units','normalized','FontSize',fts*0.8); ltr = ltr +1;
+    text(0.04,0.9,char(ltr),'units','normalized','FontSize',fts*0.8); ltr = ltr+1;
     hold on
     pcolor(X2*scl.x,X3*scl.x,hsv_alt_err);
     contour(X2*scl.x,X3*scl.x,double(mask),[0.5,0.5],'--k')
@@ -1121,7 +1101,6 @@ if opts.show_plots || opts.save_plots(3)
     clb = colorbar;
     clb.Label.String = sprintf('Potential (%s)',unt.p);
     clb.Location = 'southoutside';
-    clim([-1,1]*1.9)
     xlim(lim.x); ylim(lim.y);
     yticks([])
     xlabel(lbl.x)
@@ -1129,12 +1108,53 @@ if opts.show_plots || opts.save_plots(3)
 
     if opts.save_plots(3)
         filename = sprintf('replicated%s.png',opts.suffix);
-        fprintf('Saving %s\n',filename)
-        saveas(gcf,fullfile(opts.direc,filename))
+        fprintf('Saving %s.\n',filename)
+        saveas(gcf,fullfile(opts.direc_out,filename))
     end
 
 end
+
+if (opts.show_plots || opts.save_plots(4)) && num_tracks == 2
+    figure
+    set(gcf,'PaperPosition',[0,0,13.2,5],'Position',ful)
+    t = tiledlayout(1,2);
+    t.Title.String = 'Weighting Maps';
+    t.Title.FontSize = 1.5*fts;
+    ltr = opts.starting_letter;
+
+    nexttile
+    text(0.04-0.01,0.9,char(ltr),'units','normalized','FontSize',fts*0.8); ltr = ltr+1;
+    hold on
+    pcolor(X2*scl.x,X3*scl.x,weight0)
+    xlim(lim.x); ylim(lim.y); clim([0,1])
+    xlabel(lbl.x); ylabel(lbl.y)
+    clb = colorbar;
+    colormap(colorcet(clm.w))
+    clb.Label.String = sprintf('Weight %s',track_name0);
+    clb.Location = 'southoutside';
+    pbaspect(ar)
+
+    nexttile
+    text(0.04-0.01,0.9,char(ltr),'units','normalized','FontSize',fts*0.8)
+    hold on
+    pcolor(X2*scl.x,X3*scl.x,weight1)
+    xlim(lim.x); ylim(lim.y); clim([0,1])
+    xlabel(lbl.x); ylabel(lbl.y)
+    clb = colorbar;
+    colormap(colorcet(clm.w))
+    clb.Label.String = sprintf('Weight %s',track_name1);
+    clb.Location = 'southoutside';
+    pbaspect(ar)
+
+    if opts.save_plots(4)
+        filename = sprintf('weights%s.png',opts.suffix);
+        fprintf('Saving %s.\n',filename)
+        saveas(gcf,fullfile(opts.direc_out,filename))
+    end
+end
+
 if ~opts.show_plots
     close all
 end
+fclose all;
 end

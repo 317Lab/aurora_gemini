@@ -1,3 +1,33 @@
+% Description:
+%   Generates gemini input fields and precipitation files from configuration and
+%   grid structures. Used with aurogem.sim.replication outputs. Option
+%   for "setup_functions" in "setup" namelist.
+%
+% Example usage:
+%   aurogem.grid.plot(path-to-simulation)
+%
+% Arguments:
+%   direc                   simulation directory
+%   plot_alaska = true      (option) whether to plot Alaska
+%   plot_canada = true      (option) whether to plot Canada
+%   plot_cities = true      (option) whether to plot cities
+%   plot_altitudes = true   (option) whether to plot min and max altitudes
+%   plot_xyz = false        (option) whether to plot xyz triad
+%   plot_earth = false      (option) whether to plot Earth
+%   lon_lim = [0,360];      (option) longitude plotting limits
+%   lat_lim = [41.7,90];    (option) latitude plotting limits
+%   scale = 2               (option) plot scale
+%   cam_orbit = [-60,-60]   (option) input to camorbit
+%   cam_zoom = 3;           (option) input to camzoom
+%   xg struct = struct      (option) simulation grid
+%
+% Contact:
+%   jules.van.irsel.gr@dartmouth.edu
+%
+% Revisions:
+%   07/23/2024  initial implementation (jvi)
+%
+
 function plot(direc,opts)
 arguments
     direc (1,:) char {mustBeFolder}

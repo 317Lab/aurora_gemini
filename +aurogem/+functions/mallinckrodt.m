@@ -1,3 +1,23 @@
+% Description:
+%   Generates gemini input fields and precipitation files from configuration and
+%   grid structures. Roughly reproduces "CASE 3" inputs by A. J. Mallinckrodt
+%   (JGR, 1985, 10.1029/JA090iA01p00409). Option for "setup_functions" in
+%   "setup" namelist.
+%
+% Example usage:
+%   aurogem.functions.mallinckrodt(cfg,xg)
+%
+% Arguments:
+%   cfg     gemini configuration file
+%   xg      gemini grid file
+%
+% Contact:
+%   jules.van.irsel.gr@dartmouth.edu
+%
+% Revisions:
+%   07/23/2024  initial implementation (jvi)
+%
+
 function mallinckrodt(cfg,xg)
 arguments
     cfg (1,1) struct {mustBeNonempty}

@@ -1,6 +1,26 @@
-function setup(direc,hpc)
+% Description:
+%   Automatically configures, sets up, and runs initial condition simulation for
+%   a simulation directory. Stored in <sim_root>/ics.
+%
+% Example usage:
+%   aurogem.sim.setup('path-to-simulation','uname','hec')
+%
+% Arguments:
+%   direc       simulation directory
+%   username    nasa user id (for using hpc = "hec")
+%   hpc         high-performance computing option ("hec", "discovery", "both")
+%
+% Contact:
+%   jules.van.irsel.gr@dartmouth.edu
+%
+% Revisions:
+%   07/23/2024  initial implementation (jvi)
+%
+
+function setup(direc,username,hpc)
 arguments
     direc (1,:) char {mustBeFolder}
+    username (1,:) char {mustBeNonempty}
     hpc (1,1) string {mustBeMember(hpc,["hec","discovery","both"])}
 end
 
@@ -37,11 +57,11 @@ end
 
 % write batch script
 if strcmp(hpc,"hec")
-    aurogem.sim.pbs(direc)
+    aurogem.sim.pbs(direc,username)
 elseif strcmp(hpc,"discovery")
     aurogem.sim.slurm(direc)
 elseif strcmp(hpc,"both")
-    aurogem.sim.pbs(direc)
+    aurogem.sim.pbs(direc,username)
     aurogem.sim.slurm(direc)
 else
     warning('HPC %s not found. No batch script made.',hpc)

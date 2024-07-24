@@ -1,3 +1,25 @@
+% Description:
+%   Automatically configures, sets up, and runs initial condition simulation for
+%   a simulation directory. Stored in <sim_root>/ics
+%
+% Example usage:
+%   aurogem.sim.run_ic('path-to-simulation')
+%
+% Arguments:
+%   direc               simulation directory
+%   lxp = 32            number of cells in x2
+%   lyp = 32            number of cells in x3
+%   do_setup = true     whether to run gemini3d.model.setup
+%   do_run = true       whether to run simulation
+%   np = 32             number of processors for simulation
+%
+% Contact:
+%   jules.van.irsel.gr@dartmouth.edu
+%
+% Revisions:
+%   07/23/2024  initial implementation (jvi)
+%
+
 function run_ic(direc,opts)
 arguments
     direc (1,:) char {mustBeFolder}
@@ -69,7 +91,7 @@ while ~feof(fid)
         elseif startsWith(line,'dtout')
             fprintf(fid_ic,'dtout = %i\n',3600*4);
         elseif startsWith(line,'alt_scale')
-            fprintf(fid_ic,'alt_scale = 6000, 5000, 250e3, 3e4\n');
+            fprintf(fid_ic,'alt_scale = 6e3, 4e3, 250e3, 3e4\n');
         elseif startsWith(line,'x2parms')
             continue
         elseif startsWith(line,'x3parms')

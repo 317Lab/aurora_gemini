@@ -1,3 +1,22 @@
+% Description:
+%   Generates gemini input fields and precipitation files from configuration and
+%   grid structures. Used with aurogem.sim.replication outputs. Option
+%   for "setup_functions" in "setup" namelist.
+%
+% Example usage:
+%   aurogem.functions.replicated(cfg,xg)
+%
+% Arguments:
+%   cfg     gemini configuration file
+%   xg      gemini grid file
+%
+% Contact:
+%   jules.van.irsel.gr@dartmouth.edu
+%
+% Revisions:
+%   07/23/2024  initial implementation (jvi)
+%
+
 function replicated(cfg,xg)
 arguments
     cfg (1,1) struct {mustBeNonempty}

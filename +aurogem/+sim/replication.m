@@ -1,7 +1,22 @@
-function replication(direc,opts)
+% Description:
+%   Unpacks simulation directory in order to run aurogem.tools.replicate.
+%
+% Example usage:
+%   aurogem.sim.replication('path-to-simulation')
+%
+% Arguments:
+%   direc           simulation directory
+%
+% Contact:
+%   jules.van.irsel.gr@dartmouth.edu
+%
+% Revisions:
+%   07/23/2024  initial implementation (jvi)
+%
+
+function replication(direc)
 arguments
     direc (1,:) char {mustBeFolder}
-    opts.track (1,1) char = '_'
 end
 
 direc = fullfile(direc,'ext');
@@ -24,63 +39,70 @@ image.hall = h5read(file_image,'/Derived/Conductance/Hall');
 
 %% tracks
 file_track = fullfile(direc,'tracks.h5');
-try
-    num_tracks = h5read(file_track,'/NumTracks');
-catch
-    num_tracks = 1;
-end
+sats = char(cfg.used_tracks);
 
-for n = 1:num_tracks
-    ltr = char(64+n);
-    tmp.pos(:,1) = h5read(file_track,['/',ltr,'/Coordinates/Magnetic/Longitude']);
-    tmp.pos(:,2) = h5read(file_track,['/',ltr,'/Coordinates/Magnetic/Latitude']);
-    tmp.flow(:,1) = h5read(file_track,['/',ltr,'/Flow/Magnetic/East']);
-    tmp.flow(:,2) = h5read(file_track,['/',ltr,'/Flow/Magnetic/North']);
-    tracks.(ltr) = tmp;
+for sat = sats
+    tmp.pos(:,1) = h5read(file_track,['/',sat,'/Coordinates/Magnetic/Longitude']);
+    tmp.pos(:,2) = h5read(file_track,['/',sat,'/Coordinates/Magnetic/Latitude']);
+    tmp.flow(:,1) = h5read(file_track,['/',sat,'/Flow/Magnetic/East']);
+    tmp.flow(:,2) = h5read(file_track,['/',sat,'/Flow/Magnetic/North']);
+    tracks.(sat) = tmp;
     clear('tmp')
 end
 
-if not(strcmp(opts.track,'_'))
-    try
-        tracks = tracks.(opts.track);
-    catch
-        error('Invalid track option.')
-    end
-end
-
-% 
+%% replicate
 plot_suffix = strrep(strip(char(cfg.plot_suffix),'_'),' ','');
 if ~isempty(plot_suffix)
     plot_suffix = ['_',plot_suffix];
 end
-direc_plot = fullfile(direc,'plots');
-if ~exist(direc_plot,'dir')
-    mkdir(direc_plot)
+direc_out = fullfile(direc,'output');
+if ~exist(direc_out,'dir')
+    mkdir(direc_out)
+end
+if length(sats) == 2
+    wsl = cfg.weighting_scale_length;
+else
+    wsl = 1;
+end
+try
+    flow_bg = cfg.flow_background;
+catch
+    flow_bg = [nan,nan];
+end
+try
+    swap_primary = cfg.swap_primary;
+catch
+    swap_primary = false;
 end
 
-[phi,resnorm,E2_bg,E3_bg,v2_int,v3_int,weight_A,bound] ...
+[phi,resnorm,E2_bg,E3_bg,v2_int,v3_int,weight0,bound] ...
     = aurogem.tools.replicate(tracks,image,xg ...
     ,flow_smoothing_window = cfg.flow_smoothing_window ...
     ,boundary_smoothing_window = cfg.boundary_smoothing_window ...
     ,show_plots = true ...
     ,save_plots = true ...
-    ,direc = direc_plot ...
+    ,direc = direc_out ...
     ,suffix = plot_suffix ...
     ,add_phi_background = cfg.add_phi_background ...
     ,fit_harmonic = cfg.fit_harmonic_function ...
     ,num_replications = cfg.replication_number ...
-    ,arc_definition = "conductance" ...
+    ,arc_definition = cfg.arc_definition ...
     ,edge_method = "contour" ...
     ,do_rotate = true ...
     ,do_scale = true ...
     ,contour_values = cfg.contour_values ...
     ,harmonic_mask = cfg.harmonic_mask ...
+    ,weighting_scale_length = wsl ...
+    ,flow_bg = flow_bg ...
+    ,swap_primary = swap_primary ...
     );
 
-weight.A = weight_A;
-weight.B = 1-weight_A;
-bound_prim = [x2;bound.A(x2)];
-bound_scnd = [x2;bound.B(x2)];
+weight.(sats(1)) = weight0;
+if length(sats) == 2
+    weight.(sats(2)) = 1-weight0;
+end
+bound_prim = [x2; bound.A(x2)];
+bound_scnd = [x2; bound.B(x2)];
 h5make = @aurogem.tools.h5make;
 
 answered = false;
@@ -110,9 +132,8 @@ if happy
         ,units='Meters/second',size='lxp x lyp')
     h5make(file_phi,'/InterpolatedFlow/North',v3_int,'Magnetic northward interpolated flow' ...
         ,units='Meters/second',size='lxp x lyp')
-    for n = 1:num_tracks
-        ltr = char(64+n);
-        h5make(file_phi,['/Weights/',ltr],weight.(ltr),['Track ',ltr,' weight map'] ...
+    for sat = sats
+        h5make(file_phi,['/Weights/',sat],weight.(sat),['Track ',sat,' weight map'] ...
             ,size='lxp x lyp')
     end
     h5make(file_phi,'/Boundary/Primary',bound_prim,'Primary arc boundary'...

@@ -4,15 +4,15 @@
 %   "joule", "multi", or "all" for plotting every option.
 %
 % Example usage:
-%   aurogem.plot.run('..\public_html\Gemini3D\<sim_name>')
+%   aurogem.plot.run('path-to-simulation')
 %
 % Arguments (All options are in gemini units):
-%   direc                   gemini run directory
+%   direc                   simulation directory
 %   plots = "all"           (option) list of one or more plot name strings
 %   start = -1              (option) plotting start time (-1 = cfg.dtout)
 %   cad = -1                (option) plotting cadence (-1 = cfg.dtout)
 %   stop = -1               (option) plotting stop time (-1 = cfg.tdur)
-%   alt_ref                 (option) reference altitude
+%   alt_ref = 300e3         (option) reference altitude
 %   mlon_ref  = -1          (option) reference magnetic longitude (-1 = mean(mlon))
 %   hsv_sat  = 1e3          (option) hsv saturation magnitude
 %   j_range = [-1e-6,1e-6]  (option) current standard plot range
@@ -22,17 +22,12 @@
 %   alt_hsv = 150e3         (option) maximum hsv plotting altitude
 %   alt_cls = 120e3         (option) current closure altitude
 %
-% Dependencies:
-%   matlab R2022a or higher
-%   gemini3d (github.com/gemini3d/mat_gemini)
-%   gemscr (github.com/gemini3d/mat_gemini-scripts)
-%   aurogem.tools.load_conductances
-%   aurogem.tools.hsv_params
-%   Statistics and Machine Learning Toolbox
-%   colorcet (colorcet.holoviz.org)
-%
 % Contact:
 %   jules.van.irsel.gr@dartmouth.edu
+%
+% Revisions:
+%   07/23/2024  initial implementation (jvi)
+%
 
 function plot(direc,opts)
 arguments

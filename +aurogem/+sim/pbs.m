@@ -1,18 +1,42 @@
-function pbs(direc,opts)
+% Description:
+%   Generate Portable Batch System script for use on Pleiades nodes at the NASA
+%   High-End Computing (HEC) Program through the NASA Advanced Supercomputing
+%   (NAS) Division at Ames Research Center.
+%
+% Example usage:
+%   aurogem.sim.pbs('path-to-simulation','uname')
+%
+% Arguments:
+%   direc                   simulation directory
+%   username                nasa user id
+%   num_cpus_per_node = 16  (option) number of cpus per node
+%   num_nodes = 64          (option) number of nodes
+%   max_hours = 5           (option) maximum walltime in hours
+%   type = "bro"            (option) processor type ("bro", "has", "ivy", "san")
+%
+% Contact:
+%   jules.van.irsel.gr@dartmouth.edu
+%
+% Revisions:
+%   07/23/2024  initial implementation (jvi)
+%
+
+function pbs(direc,username,opts)
 arguments
     direc (1,:) char {mustBeFolder}
+    username (1,:) char {mustBeNonempty}
     opts.num_cpus_per_node (1,1) int32 {mustBePositive} = 16
     opts.num_nodes (1,1) int32 {mustBePositive} = 64
     opts.max_hours (1,1) double {mustBePositive} = 5
-    opts.username (1,:) char {mustBeNonempty} = 'jirsel'
+    opts.type (1,1) string {mustBeMember(opts.type,["bro","has","ivy","san"])} = "bro"
 end
 
 %% init
 gem_root = getenv('GEMINI_ROOT');
-mat_root = fullfile(filesep,'u',opts.username,'mat_gemini');
-scr_root = fullfile(filesep,'u',opts.username,'mat_gemini-scripts');
+mat_root = fullfile(filesep,'u',username,'mat_gemini');
+scr_root = fullfile(filesep,'u',username,'mat_gemini-scripts');
 sim_root = getenv('GEMINI_SIM_ROOT');
-aurogem_root = fullfile(filesep,'u',opts.username,'aurora_gemini');
+aurogem_root = fullfile(filesep,'u',username,'aurora_gemini');
 
 assert(~isempty(gem_root), ...
     ['Add environment variable GEMINI_ROOT directing to contents of ' ...
@@ -28,12 +52,12 @@ if any(direc(end)=='/\')
 end
 [~,sim_name] = fileparts(direc);
 direc = fullfile(sim_root,sim_name); % make absolute path
-pfe_path = fullfile(filesep,'u',opts.username,'sims',sim_name);
+pfe_path = fullfile(filesep,'u',username,'sims',sim_name);
 
 script_fn = 'pbs.script';
 batch_cmd = '#PBS';
 mpi_cmd = 'mpiexec';
-gemini_bin = fullfile(filesep,'u',opts.username ...
+gemini_bin = fullfile(filesep,'u',username ...
     ,'gemini3d','build','gemini.bin');
 matlab_cmd = sprintf('aurogem.sim.process(''%s'')',pfe_path);
 wall_h = floor(opts.max_hours);
@@ -88,8 +112,8 @@ fprintf(fid,'# Command options:\n');
 fprintf(fid,'%s -N %s\n', batch_cmd, sim_name);
 fprintf(fid,'%s -S /bin/bash\n', batch_cmd);
 fprintf(fid,'%s -q %s\n', batch_cmd, 'normal');
-fprintf(fid,'%s -l select=%i:ncpus=%i:mpiprocs=%i:model=bro\n', ...
-    batch_cmd, n_nodes, cpus_per_node, mpis_per_node);
+fprintf(fid,'%s -l select=%i:ncpus=%i:mpiprocs=%i:model=%s\n', ...
+    batch_cmd, n_nodes, cpus_per_node, mpis_per_node, opts.type);
 fprintf(fid,'%s -l walltime=%i:%02d:%02d\n', batch_cmd, wall_h, wall_m, wall_s);
 fprintf(fid,'%s -o %s.out\n', batch_cmd, sim_name);
 fprintf(fid,'%s -e %s.err\n', batch_cmd, sim_name);
@@ -114,7 +138,7 @@ for id = [1,fid]
 end
 
 fprintf(fid,'\n# MPI commands:\n');
-fprintf(fid,'cd /nobackup/%s\n',opts.username);
+fprintf(fid,'cd /nobackup/%s\n',username);
 
 fprintf(fid,'module use /nasa/modulefiles/testing\n');
 fprintf(fid,'module load gcc/13.2\n');

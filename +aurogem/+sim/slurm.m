@@ -1,3 +1,22 @@
+% Description:
+%   Generate Slurm workload manager script.
+%
+% Example usage:
+%   aurogem.sim.slurm('path-to-simulation')
+%
+% Arguments:
+%   direc                       simulation directory
+%   num_cpus_per_node = 64      (option) number of cpus per node
+%   num_nodes = 1               (option) number of nodes
+%   max_hours = 5               (option) maximum walltime in hours
+%
+% Contact:
+%   jules.van.irsel.gr@dartmouth.edu
+%
+% Revisions:
+%   07/23/2024  initial implementation (jvi)
+%
+
 function slurm(direc,opts)
 arguments
     direc (1,:) char {mustBeFolder}
@@ -34,7 +53,7 @@ end
 [~,sim_name] = fileparts(direc);
 direc = fullfile(sim_root,sim_name); % make absolute path
 
-script_fn = 'batch.script';
+script_fn = 'slurm.script';
 batch_cmd = '#SBATCH';
 mpi_cmd = 'mpiexec';
 gemini_bin = fullfile(gem_root,'build','gemini.bin');

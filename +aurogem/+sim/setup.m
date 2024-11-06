@@ -40,7 +40,7 @@ addpath(mat_root)
 
 % run initial condition and setup
 aurogem.sim.run_ic(direc)
-gemini3d.model.setup(direc, direc)
+% gemini3d.model.setup(direc, direc)
 
 % check if input fields on gemini grid
 simgrid_fn = fullfile(direc, 'inputs', 'simgrid.h5');
@@ -57,6 +57,68 @@ if max(abs([mlon_fields - mlon; mlat_fields - mlat])) < 1e-3
     h5write(simsize_fields_fn, '/llon', -1)
     h5write(simsize_fields_fn, '/llat', -1)
 end
+
+% generate summary plot
+clm.c = 'L17'; clm.U = 'L19'; clm.p = 'D10'; clm.j = 'D1A';
+colorcet = @aurogem.tools.colorcet;
+ar = [1.617, 1, 1];
+cfg = gemini3d.read.config(direc);
+time = cfg.times(end);
+time.Format = 'uuuuMMdd';
+input_fn = sprintf('%s_%012.6f.h5', time, second(time, 'secondofday'));
+particles_fn = fullfile(direc, 'inputs', 'particles', input_fn);
+fields_fn = fullfile(direc, 'inputs', 'fields', input_fn);
+simgrid_particles_fn = fullfile(direc, 'inputs', 'particles', 'simgrid.h5');
+
+input_mlon = h5read(simgrid_particles_fn, '/mlon');
+input_mlat = h5read(simgrid_particles_fn, '/mlat');
+assert(all(input_mlon == h5read(simgrid_particles_fn, '/mlon')), ...
+    'particles mlon and fields mlon do not match');
+assert(all(input_mlat == h5read(simgrid_particles_fn, '/mlat')), ...
+    'particles mlat and fields mlon do not match');
+[MLON, MLAT] = ndgrid(input_mlon, input_mlat);
+Qp = h5read(particles_fn, '/Qp');
+E0p = h5read(particles_fn, '/E0p');
+Vmaxx1it = h5read(fields_fn, '/Vmaxx1it');
+
+figure
+tiledlayout(3,1)
+
+nexttile
+pcolor(MLON, MLAT, Qp)
+shading flat
+clb = colorbar;
+clb.Label.String = 'Qp (mW/m^2)';
+colormap(gca, colorcet(clm.U))
+ylabel('mlat (°)')
+xticks([]);
+pbaspect(ar)
+
+nexttile
+pcolor(MLON, MLAT, E0p)
+shading flat
+clb = colorbar;
+clb.Label.String = 'E0p (eV)';
+colormap(gca, colorcet(clm.c))
+ylabel('mlat (°)');
+xticks([]);
+pbaspect(ar)
+
+nexttile
+pcolor(MLON, MLAT, Vmaxx1it)
+shading flat
+clb = colorbar;
+if cfg.flagdirich == 1
+    clb.Label.String = 'Vmaxx1it (V)';
+    colormap(gca, colorcet(clm.p))
+elseif cfg.flagdirich == 0
+    clb.Label.String = 'Vmaxx1it (A/m^2)';
+    colormap(gca, colorcet(clm.j))
+end
+xlabel('mlon (°)'); ylabel('mlat (°)');
+pbaspect(ar)
+
+exportgraphics(gcf, fullfile(direc, 'inputs', 'summary.png'), 'Resolution', 600)
 
 % write batch script
 if strcmp(hpc, "hec")

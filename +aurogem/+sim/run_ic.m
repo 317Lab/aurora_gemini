@@ -82,7 +82,7 @@ while ~feof(fid)
     end
     if do_write
         if startsWith(line, 'ymd')
-            ymd = str2double(split(regexprep(line, '[^0-9,]', ''), ', '))';
+            ymd = str2double(split(regexprep(line, '[^0-9,]', ''), ','))';
             date = datetime(ymd) - days(1);
             ymd_new = ['ymd = ', char(date, 'uuuu, M, d')];
             fprintf(fid_ic, '%s\n', ymd_new);

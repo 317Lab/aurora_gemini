@@ -40,7 +40,7 @@ addpath(mat_root)
 
 % run initial condition and setup
 aurogem.sim.run_ic(direc)
-% gemini3d.model.setup(direc, direc)
+gemini3d.model.setup(direc, direc)
 
 % check if input fields on gemini grid
 simgrid_fn = fullfile(direc, 'inputs', 'simgrid.h5');

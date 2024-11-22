@@ -84,7 +84,7 @@ fprintf('Minimum x2 difference = %i m\n',round(min(diff(x2*1e3))))
 fprintf('Maximum x2 difference = %i m\n',round(max(diff(x2*1e3))))
 fprintf('Minimum x3 difference = %i m\n',round(min(diff(x3*1e3))))
 fprintf('Maximum x3 difference = %i m\n',round(max(diff(x3*1e3))))
-fprintf('\nCopy the follong into config.nml:\n\n')
+fprintf('\nCopy the following into config.nml:\n\n')
 fprintf('x2parms = %i, %i, %i, %i\n', ...
     parms_x2(1),parms_x2(2),parms_x2(3),parms_x2(4))
 fprintf('x3parms = %i, %i, %i, %i\n\n', ...

@@ -61,8 +61,8 @@ elseif cfg.flagdirich == 0
     x3_part = h5read(direc_part, '/Coordinates/Magnetic/North');
 end
 [X2_part, X3_part] = ndgrid(x2_part, x3_part);
-fQ = griddedInterpolant(X2_part, X3_part, Q_part, 'spline');
-fE0 = griddedInterpolant(X2_part, X3_part, E0_part, 'spline');
+fQ = griddedInterpolant(X2_part, X3_part, Q_part, 'cubic');
+fE0 = griddedInterpolant(X2_part, X3_part, E0_part, 'cubic');
 Q = fQ(X2_prec, X3_prec);
 E0 = fE0(X2_prec, X3_prec);
 

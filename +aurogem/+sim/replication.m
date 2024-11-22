@@ -68,6 +68,7 @@ for sat = sats
     tmp.flow(:, 2) = h5read(file_track, ['/', sat, '/Flow/Magnetic/North']);
     tmp.fac(:, 1) = h5read(file_track, ['/', sat, '/Current/FieldAligned']);
     tmp.pos_type = tracks_pos_type;
+    fprintf('Median eastward flow is %.3f m/s\n', nanmedian(tmp.flow(:, 1))) %#ok<NANMEDIAN>
     tracks.(sat) = tmp;
     clear('tmp')
 end
@@ -86,25 +87,39 @@ if length(sats) == 2
 else
     wsl = 1;
 end
-try
+if isfield(cfg, 'flow_background')
     flow_bg = cfg.flow_background;
-catch
+else
     flow_bg = [nan, nan];
 end
-try
+if isfield(cfg, 'swap_primary')
     swap_primary = cfg.swap_primary;
-catch
+else
     swap_primary = false;
 end
-try
+if isfield(cfg, 'driver')
     driver = cfg.driver;
-catch
+    file_bc = 'current.h5';
+else
     driver = 'flow';
+    file_bc = 'potential.h5';
+end
+boundaries = nan(2, 2, 1);
+if isfield(cfg, 'boundary_directory')
+    file_bound = fullfile(cfg.boundary_directory, 'ext', file_bc);
+    if exist(file_bound, 'file')
+        bound_prim = h5read(file_bound, '/Boundary/Primary');
+        bound_scnd = h5read(file_bound, '/Boundary/Secondary');
+        boundaries = nan(2, 2, size(bound_prim, 2));
+        boundaries(1, :, :) = bound_prim;
+        boundaries(2, :, :) = bound_scnd;
+    end
 end
 
 [bc, resnorm, E2_bg, E3_bg, v2_int, v3_int, weight0, bound] ...
     = aurogem.tools.replicate(tracks, image, xg ...
     , driver = driver ...
+    , boundaries = boundaries ...
     , data_smoothing_window = cfg.data_smoothing_window ...
     , boundary_smoothing_window = cfg.boundary_smoothing_window ...
     , show_plots = true ...
@@ -146,13 +161,8 @@ while not(answered)
 end
 
 if happy
-    if strcmp(driver, 'flow')
-        file_bc = fullfile(direc, 'potential.h5');
-    else
-        file_bc = fullfile(direc, 'current.h5');
-    end
+    file_bc = fullfile(direc, file_bc);
     fprintf('Saving %s\n', file_bc)
-
     if strcmp(driver, 'flow')
         h5make(file_bc, '/Driver/Potential', bc, 'Convection electric potential' ...
             , units='Volts', size='lxp x lyp')

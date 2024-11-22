@@ -66,7 +66,7 @@ lx2 = double(h5read(grid_size_fn, '/lx2'));
 lx3 = double(h5read(grid_size_fn, '/lx3'));
 total_cells = num2str(lx1 * lx2 * lx3);
 for p = 1:ceil(length(total_cells)/3)-1
-    total_cells = [total_cells(1:end-4*p+1), ', ', total_cells(end-4*p+2:end)];
+    total_cells = [total_cells(1:end-4*p+1), ',', total_cells(end-4*p+2:end)];
 end
 
 % check even division of cpus/nodes into horizontal cells
@@ -107,7 +107,7 @@ fprintf(fid, '\n# Command options:\n');
 fprintf(fid, '%s -J %s\n', batch_cmd, sim_name);
 fprintf(fid, '%s -o %s%s%%j.log\n', batch_cmd, direc, filesep);
 fprintf(fid, '%s -e %s%s%%j.err\n', batch_cmd, direc, filesep);
-fprintf(fid, '%s --mail-type=END, FAIL\n', batch_cmd);
+fprintf(fid, '%s --mail-type=END,FAIL\n', batch_cmd);
 fprintf(fid, '%s --time=%i\n', batch_cmd, opts.max_hours*60);
 fprintf(fid, '%s --nodes=%i\n', batch_cmd, n_nodes);
 fprintf(fid, '%s --ntasks-per-node=%i\n', batch_cmd, cpus_per_node);

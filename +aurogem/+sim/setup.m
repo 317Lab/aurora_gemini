@@ -27,9 +27,9 @@ end
 potential_fn = fullfile(direc, 'ext', 'potential.h5');
 current_fn = fullfile(direc, 'ext', 'current.h5');
 if not(exist(potential_fn, 'file')) && not(exist(current_fn, 'file'))
-    error('Please have either potential.h5 or current.h5, not both.')
-elseif exist(potential_fn, 'file') && exist(current_fn, 'file')
     error('Please run aurogem.sim.replication first.')
+elseif exist(potential_fn, 'file') && exist(current_fn, 'file')
+    error('Please have either potential.h5 or current.h5, not both.')
 end
 
 mat_root = getenv('GEMINI_MAT_ROOT');

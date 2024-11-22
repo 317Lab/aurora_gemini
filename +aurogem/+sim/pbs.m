@@ -25,8 +25,8 @@ function pbs(direc, username, opts)
 arguments
     direc (1, :) char {mustBeFolder}
     username (1, :) char {mustBeNonempty}
-    opts.num_cpus_per_node (1, 1) int32 {mustBePositive} = 16
-    opts.num_nodes (1, 1) int32 {mustBePositive} = 64
+    opts.num_cpus_per_node (1, 1) int32 {mustBePositive} = 12
+    opts.num_nodes (1, 1) int32 {mustBePositive} = 96
     opts.max_hours (1, 1) double {mustBePositive} = 5
     opts.type (1, 1) string {mustBeMember(opts.type, ["bro", "has", "ivy", "san"])} = "bro"
 end
@@ -141,14 +141,16 @@ fprintf(fid, '\n# MPI commands:\n');
 fprintf(fid, 'cd /nobackup/%s\n', username);
 
 fprintf(fid, 'module use /nasa/modulefiles/testing\n');
-fprintf(fid, 'module load gcc/13.2\n');
+fprintf(fid, 'module load gcc/11.4\n');
 fprintf(fid, 'module load openmpi/4.1.6-toss4-gnu\n');
+fprintf(fid, 'module load comp-intel/2023.2.1\n');
 
 fprintf(fid, '%s %s %s\n', mpi_cmd, gemini_bin, pfe_path);
 
-fprintf(fid, 'module unuse /nasa/modulefiles/testing\n');
-fprintf(fid, 'module unload gcc/13.2\n');
+fprintf(fid, 'module unload gcc/11.4\n');
 fprintf(fid, 'module unload openmpi/4.1.6-toss4-gnu\n');
+fprintf(fid, 'module unload comp-intel/2023.2.1\n');
+fprintf(fid, 'module unuse /nasa/modulefiles/testing\n');
 
 fprintf(fid, '\n# Other commands:\n');
 fprintf(fid, 'module load matlab\n');

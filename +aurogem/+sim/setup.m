@@ -17,11 +17,12 @@
 %   07/23/2024  initial implementation (jvi)
 %
 
-function setup(direc, username, hpc)
+function setup(direc, username, hpc, opts)
 arguments
     direc (1, :) char {mustBeFolder}
     username (1, :) char {mustBeNonempty}
     hpc (1, 1) string {mustBeMember(hpc, ["hec", "discovery", "both"])}
+    opts.group_list (1, :) char = ''
 end
 
 potential_fn = fullfile(direc, 'ext', 'potential.h5');
@@ -59,6 +60,7 @@ if max(abs([mlon_fields - mlon; mlat_fields - mlat])) < 1e-3
 end
 
 % generate summary plot
+reset(0)
 clm.c = 'L17'; clm.U = 'L19'; clm.p = 'D10'; clm.j = 'D1A';
 colorcet = @aurogem.tools.colorcet;
 ar = [1.617, 1, 1];
@@ -122,11 +124,11 @@ exportgraphics(gcf, fullfile(direc, 'inputs', 'summary.png'), 'Resolution', 600)
 
 % write batch script
 if strcmp(hpc, "hec")
-    aurogem.sim.pbs(direc, username)
+    aurogem.sim.pbs(direc, username, group_list = opts.group_list)
 elseif strcmp(hpc, "discovery")
     aurogem.sim.slurm(direc)
 elseif strcmp(hpc, "both")
-    aurogem.sim.pbs(direc, username)
+    aurogem.sim.pbs(direc, username, group_list = opts.group_list)
     aurogem.sim.slurm(direc)
 else
     warning('HPC %s not found. No batch script made.', hpc)

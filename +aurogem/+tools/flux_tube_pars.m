@@ -7,10 +7,10 @@ fn = fullfile(direc, 'plots3d', 'flux_tube_config.nml');
 assert(exist(fn, 'file'), 'Flux tube configuration, %s, file not found.', fn)
 
 base_vars = ["limx", "limy", "limz", "zoom", "panx", "pany"];
-base_default = {nan(1, 2), nan(1, 2), nan(1, 2), ones(1, 3), zeros(1, 3), zeros(1, 3)};
+base_default = {nan(1, 2), nan(1, 2), nan(1, 2), [1.11, 1, 1.3], [-0.11, 0.2, 0.2], [0, 0.2, 0.2]};
 tube_vars = ["p0", "r", "v0", "v1", "resolution", "color", "do_reverse", ...
-    "do_inline", "split_factor", "max_diff_factor", "outline_axis", "outline_res"];
-tube_default = {nan(1, 3), nan(1, 2), [1, 0, 0], [0, 1, 0], 300, nan(1, 3), 0, 1, 10, 100, 3, 2};
+    "do_projection", "split_factor", "max_diff_factor", "outline_axis", "outline_res"];
+tube_default = {nan(1, 3), nan(1, 2), [1, 0, 0], [0, 1, 0], 300, nan(1, 3), 0, 1, 10, 50, 3, 2};
 
 for i = 1:length(base_vars)
     base.(base_vars(i)) = base_default{i};

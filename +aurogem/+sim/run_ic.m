@@ -11,7 +11,7 @@
 %   lyp = 24            number of cells in x3
 %   do_setup = true     whether to run gemini3d.model.setup
 %   do_run = true       whether to run simulation
-%   np = 16             number of processors for simulation
+%   np = 32             number of processors for simulation
 %
 % Contact:
 %   jules.van.irsel.gr@dartmouth.edu
@@ -27,7 +27,7 @@ arguments
     opts.lyp (1, 1) int32 {mustBePositive} = 24
     opts.do_setup (1, 1) logical = true
     opts.do_run (1, 1) logical = true
-    opts.np (1, 1) int32 {mustBePositive} = 16
+    opts.np (1, 1) int32 {mustBePositive} = 32
 end
 
 %% init

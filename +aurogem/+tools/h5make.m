@@ -10,7 +10,11 @@ arguments
     opts.foot_alt (1,:) char = ''
     opts.note (1,:) char = ''
 end
-h5create(file,name,size(var),'Datatype',opts.type)
+try
+    h5create(file,name,size(var),'Datatype',opts.type)
+catch
+    warning('%s already exists in %s',name,file)
+end
 h5write(file,name,var)
 h5writeatt(file,name,'Title',title)
 if ~isempty(opts.units)

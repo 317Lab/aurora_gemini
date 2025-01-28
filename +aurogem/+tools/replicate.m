@@ -28,6 +28,7 @@ arguments
     opts.data_smoothing_window (1, 1) int32 {mustBeNumeric} = -1
     opts.do_rotate (1, 1) logical = true
     opts.do_scale (1, 1) logical = true
+    opts.track_shift (1, :) double = 0
     opts.arc_definition {mustBeMember(opts.arc_definition, ["conductance", "Pedersen", "Hall", "flux"])} = "Pedersen"
     opts.edge_method {mustBeMember(opts.edge_method, ["contour", "sobel"])} = "contour"
     opts.contour_values (1, 2) double = nan(1, 2)
@@ -39,7 +40,7 @@ arguments
     opts.add_phi_background (1, 1) logical = false
     opts.plot_bg (1, 1) logical = false
     opts.show_plots (1, 1) logical = false
-    opts.save_plots (1, 4) logical = false(1, 5)
+    opts.save_plots (1, 4) logical = false
     opts.save_data (1, 1) logical = false
     opts.auto_lim (1, 1) logical = true
     opts.direc_out (1, :) char {mustBeFolder} = 'output'
@@ -48,9 +49,9 @@ arguments
 end
 
 %% initialize
-ftn = 'Arial';
-fts = 10 * 2;
-lw = 1.4;
+fntn = 'Arial';
+fnts = 20 * 2;
+linw = 2;
 qnt = 0.97;
 scs = get(0, 'ScreenSize');
 % tpl = [0.0 * scs(3), 0.525 * scs(4), 0.5 * scs(3), 0.4 * scs(4)];
@@ -62,20 +63,20 @@ ful = [0.0 * scs(3), 0.050 * scs(4), 1.0 * scs(3), 0.875 * scs(4)];
 close all
 reset(0)
 set(0, 'defaultFigurePaperUnits', 'inches')
-set(0, 'defaultTiledlayoutPadding', 'tight')
-set(0, 'defaultTiledlayoutTileSpacing', 'tight')
+set(0, 'defaultTiledlayoutPadding', 'compact')
+set(0, 'defaultTiledlayoutTileSpacing', 'compact')
 set(0, 'defaultSurfaceEdgeColor', 'flat')
-set(0, 'defaultLineLineWidth', lw)
-set(0, 'defaultScatterLineWidth', lw)
-set(0, 'defaultQuiverLineWidth', lw * 0.7)
-aurogem.tools.setall(0, 'FontName', ftn)
-aurogem.tools.setall(0, 'FontSize', fts)
+set(0, 'defaultLineLineWidth', linw)
+set(0, 'defaultScatterLineWidth', linw)
+set(0, 'defaultQuiverLineWidth', linw * 0.7)
+aurogem.tools.setall(0, 'FontName', fntn)
+aurogem.tools.setall(0, 'FontSize', fnts)
 aurogem.tools.setall(0, 'Multiplier', 1)
 
 colorcet = @aurogem.tools.colorcet;
 
 scl.x = 1e-3; scl.v = 1e-3; scl.dv = 1e3; scl.p = 1e-3; scl.j = 1e6;
-unt.x = 'km'; unt.v = 'km/s'; unt.dv = 'mHz'; unt.p = 'kV'; unt.j = 'uA/m^2';
+unt.x = 'km'; unt.v = 'km/s'; unt.dv = 'mHz'; unt.p = 'kV'; unt.j = 'uA/m2';
 clm.v = 'D2'; clm.dv = 'CBD1'; clm.p = 'D10'; clm.j = 'D1A'; clm.w = 'L6';
 lim.x = [-1, 1] * 125; lim.y = [-1, 1] * 59;  lim.v = [-1, 1] * 1.3; lim.dv = [-1, 1] * 0.1;
 
@@ -85,7 +86,7 @@ lbl.x = sprintf('Mag. E (%s)', unt.x);
 lbl.y = sprintf('Mag. N (%s)', unt.x);
 lbl.vx = sprintf('v_E (%s)', unt.v);
 lbl.vy = sprintf('v_N (%s)', unt.v);
-lbl.j = sprintf('j_{||} (%s)', unt.j);
+lbl.j = sprintf('FAC (%s)', unt.j);
 
 fid = fopen(fullfile(opts.direc_out, 'output.txt'), 'w');
 if not(isempty(opts.suffix))
@@ -104,6 +105,9 @@ elseif strcmp(opts.driver, 'current')
     scl.d = scl.j;
     unt.d = unt.j;
 end
+
+clbg = [8, 79, 106] / 255;
+cltx = [1, 1, 1];
 
 %% unpack grid
 if opts.upsample > 1
@@ -135,7 +139,8 @@ lx2 = xg.lx(2); lx3 = xg.lx(3);
 mlon_to_x2 = griddedInterpolant(mlon, x2);
 mlat_to_x3 = griddedInterpolant(mlat, x3);
 Bmag = abs(mean(xg.Bmag, 'all'));
-ar = [range(x2), range(x3), range(x3)];
+% ar = [range(x2), range(x3), range(x3)];
+ar = [1.6, 1, 1];
 
 if opts.auto_lim
     lim.x = [-1, 1] * max(x2) * scl.x;
@@ -244,18 +249,19 @@ if all(isnan(opts.boundaries(:)))
             contour(X2_imag, X3_imag, arc, 20)
             contour(X2_imag, X3_imag, arc, [1, 1] * cntr_vals(1), '--r')
             filename = fullfile(opts.direc_out, 'contour_dump.png');
-            saveas(gcf, filename)
+            % saveas(gcf, filename)
+            print(gcf, filename, '-dpng', '-r96')
             error('On or more contours not found. See %s for details.', filename)
         end
-    
-    
+
+
         if min(x2_bounds_A) > min(X2_imag(:)) || max(x2_bounds_A) < max(X2_imag(:))
             warning('Primary boundary does not span image space.')
         end
         if min(x2_bounds_B) > min(X2_imag(:)) || max(x2_bounds_B) < max(X2_imag(:))
             warning('Secondary boundary does not span image space.')
         end
-    
+
         x2_bounds_A = smoothdata(x2_bounds_A, "gaussian");
         x3_bounds_A = smoothdata(x3_bounds_A, "gaussian", bsw);
         x2_bounds_B = smoothdata(x2_bounds_B, "gaussian");
@@ -267,7 +273,7 @@ if all(isnan(opts.boundaries(:)))
         x2_bounds_B = aurogem.tools.minsmooth(x2_bounds_B(sort_ids_B));
         x3_bounds_B = x3_bounds_B(sort_ids_B);
     end
-    
+
     bound.A = griddedInterpolant(x2_bounds_A, x3_bounds_A);
     bound.B = griddedInterpolant(x2_bounds_B, x3_bounds_B);
     if opts.swap_primary
@@ -292,16 +298,17 @@ angle = griddedInterpolant(bound_pts(1:end - 1), ...
     atan2(smoothdata(diff(bound.A(bound_pts)), "loess") ...
     , diff(bound_pts)));
 
-if opts.show_plots || opts.save_plots(1)
+if opts.show_plots || opts.save_plots
     figure
-    set(gcf, 'PaperPosition', [0, 0, 13.2, 5], 'Position', ful)
-    t = tiledlayout(1, 2);
-    t.Title.String = 'Boundary Definitions';
-    t.Title.FontSize = 1.5 * fts;
+    set(gcf, 'PaperPosition', [0, 0, 13.2, 6] * 2, 'Position', ful)
+    tiledlayout(1, 2);
+    % t.Title.String = 'Boundary Definitions';
+    % t.Title.FontSize = fnts;
+    % t.Title.Color = cltx;
     ltr = opts.starting_letter;
 
-    nexttile
-    text(0.04 - 0.01, 0.9, char(ltr), 'units', 'normalized', 'FontSize', fts * 0.8); ltr = ltr + 1;
+    ax1 = nexttile;
+    text(0.04 - 0.01, 0.9, char(ltr), 'units', 'normalized', 'FontSize', fnts * 0.8); ltr = ltr + 1;
     hold on
     pcolor(X2_imag * scl.x, X3_imag * scl.x, arc.^ap * scl.arc)
     plot(bound_pts * scl.x, bound.A(bound_pts) * scl.x, 'k')
@@ -309,12 +316,17 @@ if opts.show_plots || opts.save_plots(1)
     xlim(lim.x); ylim(lim.y)
     xlabel(lbl.x); ylabel(lbl.y)
     colormap(gca, colorcet(clm.arc))
+    clb = colorbar;
+    clb.Color = cltx;
+    clb.Label.String = lbl.arc;
+    clb.Label.Color = cltx;
+    clb.Location = 'southoutside';
     pbaspect(ar)
     legend('', 'Primary', 'Secondary' ...
-        , 'Location', 'northwest', 'Orientation', 'horizontal')
+        , 'Location', 'northeast', 'Orientation', 'horizontal')
 
-    nexttile
-    text(0.04, 0.9, char(ltr), 'units', 'normalized', 'FontSize', fts * 0.8)
+    ax2 = nexttile;
+    text(0.04, 0.9, char(ltr), 'units', 'normalized', 'FontSize', fnts * 0.8)
     hold on
     [C, h] = contour(X2_imag * scl.x, X3_imag * scl.x, arc.^ap * scl.arc, 10, 'ShowText', 1, 'LabelFormat', '%0.1f');
     clabel(C, h, 'Fontsize', 5)
@@ -325,14 +337,22 @@ if opts.show_plots || opts.save_plots(1)
     xlabel(lbl.x)
     colormap(gca, colorcet(clm.arc))
     clb = colorbar;
+    clb.Color = cltx;
     clb.Label.String = lbl.arc;
+    clb.Label.Color = cltx;
+    clb.Location = 'southoutside';
     pbaspect(ar)
 
-    if opts.save_plots(1)
+    set(gcf, 'Color', clbg, 'InvertHardcopy', 'off')
+    set([ax1, ax2], 'GridColor', cltx, 'MinorGridColor', cltx, ...
+        'XColor', cltx, 'YColor', cltx, 'ZColor', cltx)
+
+    if opts.save_plots
         filename = sprintf('boundary_definitions%s.png', opts.suffix);
         filename = fullfile(opts.direc_out, filename);
         fprintf('Saving %s.\n', filename)
-        saveas(gcf, filename)
+        % saveas(gcf, filename)
+        print(gcf, filename, '-dpng', '-r96')
     end
 end
 
@@ -362,9 +382,9 @@ for track_id = 1:num_tracks
         track = tracks.(track_name);
         for i=[1, fid]; fprintf(i, [pad(sprintf(' Current track = %s ', track_name) ...
                 , 80, 'both', '-'), '\n']); end
-        title_pfx = sprintf('Track %s: ', track_name);
-    else
-        title_pfx = '';
+        %     title_pfx = sprintf('Track %s: ', track_name);
+        % else
+        %     title_pfx = '';
     end
 
     % assertions
@@ -379,9 +399,17 @@ for track_id = 1:num_tracks
     if not(issorted(track.pos(:, 2)))
         track.pos = flip(track.pos);
         track.flow = flip(track.flow);
+        track.fac = flip(track.fac);
     end
 
     % unpack TRACK data
+    if track_id == 2 % old track data needed for plotting purposes
+        x2_traj_old = x2_traj;
+        x3_traj_old = x3_traj;
+        d2_traj_old = d2_traj;
+        d3_traj_old = d3_traj;
+    end
+
     if strcmp(opts.pos_type, "angular")
         mlon_traj = smoothdata(track.pos(:, 1), "loess", 16);
         mlat_traj = smoothdata(track.pos(:, 2), "loess", 16);
@@ -390,6 +418,19 @@ for track_id = 1:num_tracks
     else
         x2_traj = smoothdata(track.pos(:, 1), "loess", 16);
         x3_traj = smoothdata(track.pos(:, 2), "loess", 16);
+    end
+    
+    % track shifting for difficult extrapolations
+    if opts.track_shift(track_id) ~= 0
+        shift_check_ids = x3_traj < max(x3) & x3_traj > min(x3);
+        if all(x2_traj(shift_check_ids) > max(x2)) || all(x2_traj(shift_check_ids) < min(x2)) 
+            track_offset = range(x3) * opts.track_shift(track_id);
+            x3_traj = x3_traj + track_offset;
+            warning('SHIFTING TRACK BY %.0f METERS MAGNETIC NORTHWARD', track_offset)
+        else
+            error(['Attempting to shift track %i while the track is inside the simulation boundary.\n ' ...
+                'Please, only shift data when extrapolating from outside the simulation boundary.'], track_id)
+        end
     end
 
     if flow_driven
@@ -418,8 +459,9 @@ for track_id = 1:num_tracks
     % v3_traj = fv3(x2_traj, x3_traj);
 
     % adjust x limits
-    lim.x(1) = min([x2_traj(x3_traj * scl.x > lim.y(1) & x3_traj * scl.x < lim.y(2)) * scl.x; lim.x(1)]);
-    lim.x(2) = max([x2_traj(x3_traj * scl.x > lim.y(1) & x3_traj * scl.x < lim.y(2)) * scl.x; lim.x(2)]);
+    lim.xx = lim.x;
+    lim.xx(1) = min([x2_traj(x3_traj * scl.x > lim.y(1) & x3_traj * scl.x < lim.y(2)) * scl.x; lim.x(1)]);
+    lim.xx(2) = max([x2_traj(x3_traj * scl.x > lim.y(1) & x3_traj * scl.x < lim.y(2)) * scl.x; lim.x(2)]);
 
     %% replicate in situ flow data
     % 0 = original, 1 = replicated, a = primary boundary, b = secondary boundary
@@ -485,8 +527,8 @@ for track_id = 1:num_tracks
     % v2_traj = fv2_traj(x3_traj);
     % v3_traj = fv3_traj(x3_traj);
     % [~, sort_ids] = sort(x2_traj);
-    
-    
+
+
 
     % replicate
     dx_min = (x2(1) - max(x2_traj)) * 1.1;
@@ -563,19 +605,20 @@ for track_id = 1:num_tracks
         save(fullfile('data', 'reps.mat'), 'x2_traj_rep', 'x3_traj_rep', 'd2_traj_rep', 'd3_traj_rep')
     end
 
-    if opts.show_plots || opts.save_plots(2)
+    if opts.show_plots || opts.save_plots
         figure
-        set(gcf, 'PaperPosition', [0, 0, 13.2, 5], 'Position', ful)
-        t = tiledlayout(1, 2);
-        t.Title.String = sprintf('%sReplication Subset', title_pfx);
-        t.Title.FontSize = 1.5 * fts;
+        set(gcf, 'PaperPosition', [0, 0, 13.2, 6] * 2, 'Position', ful)
+        tiledlayout(1, 2);
+        % t.Title.String = sprintf('%sReplication Subset', title_pfx);
+        % t.Title.FontSize = fnts;
+        % t.Title.Color = cltx;
         ltr = opts.starting_letter;
 
         [~, j_p] = min(abs(x3_traj - bound.B(x0b)));
 
-        nexttile
+        ax1 = nexttile;
         ms = 400;
-        text(0.04 - 0.01, 0.9, char(ltr), 'units', 'normalized', 'FontSize', fts * 0.8); ltr = ltr + 1;
+        text(0.04 - 0.01, 0.9, char(ltr), 'units', 'normalized', 'FontSize', fnts * 0.8); ltr = ltr + 1;
         hold on
         pcolor(X2_imag * scl.x, X3_imag * scl.x, arc.^ap * scl.arc)
         plot(bound_pts * scl.x, bound.A(bound_pts) * scl.x, 'k')
@@ -593,15 +636,20 @@ for track_id = 1:num_tracks
         scatter(x0b * scl.x, y0b * scl.x, ms, 'xr')
         scatter(x1a_p1 * scl.x, y1a_p1 * scl.x, ms, 'xk')
         scatter(x1a_p2 * scl.x, y1a_p2 * scl.x, ms, 'xk')
-        xlim(lim.x); ylim(lim.y)
+        xlim(lim.xx); ylim(lim.y)
         xlabel(lbl.x); ylabel(lbl.y)
         colormap(gca, colorcet(clm.arc))
+        clb = colorbar;
+        clb.Color = cltx;
+        clb.Label.String = lbl.arc;
+        clb.Label.Color = cltx;
+        clb.Location = 'southoutside';
         pbaspect(ar)
 
-        nexttile
+        ax2 = nexttile;
         vs = 10;
         cad = 16;
-        text(0.04, 0.9, char(ltr), 'units', 'normalized', 'FontSize', fts * 0.8)
+        text(0.04, 0.9, char(ltr), 'units', 'normalized', 'FontSize', fnts * 0.8)
         hold on
         pcolor(X2_imag * scl.x, X3_imag * scl.x, arc.^ap * scl.arc)
         plot(bound_pts * scl.x, bound.A(bound_pts) * scl.x, 'k')
@@ -610,19 +658,28 @@ for track_id = 1:num_tracks
             d2_traj_rep(1:cad:end) * scl.d * vs, d3_traj_rep(1:cad:end) * scl.d * vs, 0, '.-b')
         quiver(x2_traj * scl.x, x3_traj * scl.x, ...
             d2_traj * scl.d * vs, d3_traj * scl.d * vs, 0, '.-r')
-        xlim(lim.x); ylim(lim.y)
+        xlim(lim.xx); ylim(lim.y)
         yticks([])
         xlabel(lbl.x)
         colormap(gca, colorcet(clm.arc))
+        clb = colorbar;
+        clb.Color = cltx;
+        clb.Label.String = lbl.arc;
+        clb.Label.Color = cltx;
+        clb.Location = 'southoutside';
         pbaspect(ar)
-        rectangle('Position', [lim.x(1) + range(lim.x) * 0.7, lim.y(1), range(lim.x) * 0.3, ...
+        rectangle('Position', [lim.xx(1) + range(lim.xx) * 0.7, lim.y(1), range(lim.xx) * 0.3, ...
             range(lim.y) / 8], 'FaceColor', 'w', 'FaceAlpha', 0.7, 'EdgeColor', 'none')
-        quiver(lim.x(1) + 1.03 * range(lim.x) * 0.7, lim.y(1) + range(lim.y) / 16, ...
-            vs, 0, 0, '.-r', 'LineWidth', lw)
-        text(lim.x(1) + 1.12 * range(lim.x) * 0.7, lim.y(1) + range(lim.y) / 16, ...
-            sprintf('%.0f %s', 1, unt.d), 'FontSize', fts)
+        quiver(lim.xx(1) + 1.03 * range(lim.xx) * 0.7, lim.y(1) + range(lim.y) / 16, ...
+            vs, 0, 0, '.-r', 'LineWidth', linw)
+        text(lim.xx(1) + 1.12 * range(lim.xx) * 0.7, lim.y(1) + range(lim.y) / 16, ...
+            sprintf('%.0f %s', 1, unt.d), 'FontSize', fnts)
 
-        if opts.save_plots(2)
+        set(gcf, 'Color', clbg, 'InvertHardcopy', 'off')
+        set([ax1, ax2], 'GridColor', cltx, 'MinorGridColor', cltx, ...
+            'XColor', cltx, 'YColor', cltx, 'ZColor', cltx)
+
+        if opts.save_plots
             if num_tracks == 1
                 filename = sprintf('replication_subset%s.png', opts.suffix);
             else
@@ -631,7 +688,8 @@ for track_id = 1:num_tracks
             end
             filename = fullfile(opts.direc_out, filename);
             fprintf('Saving %s.\n', filename)
-            saveas(gcf, filename)
+            % saveas(gcf, filename)
+            print(gcf, filename, '-dpng', '-r96')
         end
     end
 
@@ -664,10 +722,17 @@ if num_tracks > 1
 
     track_name0 = cell2mat(track_names(1));
     track_name1 = cell2mat(track_names(2));
-    x20 = mlon_to_x2(tracks.(track_name0).pos(:, 1));
-    x30 = mlat_to_x3(tracks.(track_name0).pos(:, 2));
-    x21 = mlon_to_x2(tracks.(track_name1).pos(:, 1));
-    x31 = mlat_to_x3(tracks.(track_name1).pos(:, 2));
+    if strcmp(opts.pos_type, "angular")
+        x20 = mlon_to_x2(tracks.(track_name0).pos(:, 1));
+        x30 = mlat_to_x3(tracks.(track_name0).pos(:, 2));
+        x21 = mlon_to_x2(tracks.(track_name1).pos(:, 1));
+        x31 = mlat_to_x3(tracks.(track_name1).pos(:, 2));
+    else
+        x20 = tracks.(track_name0).pos(:, 1);
+        x30 = tracks.(track_name0).pos(:, 2);
+        x21 = tracks.(track_name1).pos(:, 1);
+        x31 = tracks.(track_name1).pos(:, 2);
+    end
     l0 = length(x20);
     l1 = length(x21);
 
@@ -685,7 +750,7 @@ if num_tracks > 1
 
     weight_scale = opts.weighting_scale_length;
     weight0 = (1 + tanh((min_dist1 - min_dist0) * 2 / weight_scale)) / 2;
-    weight0 = aurogem.tools.smoothdata2(weight0, "gaussian", 100);
+    weight0 = smoothdata2(weight0, "gaussian", 100);
     weight1 = 1 - weight0;
     for i=[1, fid]; fprintf(i, 'Maximum weight = %f.\n', max(weight0(:))); end
 
@@ -699,20 +764,62 @@ else
     weight0 = ones(size(X2));
 end
 
-if (opts.show_plots || opts.save_plots(3)) && not(flow_driven)
+if (opts.show_plots || opts.save_plots) && num_tracks == 2
+    figure
+    set(gcf, 'PaperPosition', [0, 0, 13.2, 5] * 2, 'Position', ful)
+    tiledlayout(1, 2);
+    % t.Title.String = 'Weighting Maps';
+    % t.Title.FontSize = fnts;
+    ltr = opts.starting_letter;
+
+    nexttile
+    text(0.04 - 0.01, 0.9, char(ltr), 'units', 'normalized', 'FontSize', fnts * 0.8); ltr = ltr + 1;
+    hold on
+    pcolor(X2 * scl.x, X3 * scl.x, weight0)
+    xlim(lim.x); ylim(lim.y); clim([0, 1])
+    xlabel(lbl.x); ylabel(lbl.y)
+    clb = colorbar;
+    colormap(gca, colorcet(clm.w))
+    clb.Label.String = sprintf('Weight %s', track_name0);
+    clb.Location = 'southoutside';
+    pbaspect(ar)
+
+    nexttile
+    text(0.04 - 0.01, 0.9, char(ltr), 'units', 'normalized', 'FontSize', fnts * 0.8)
+    hold on
+    pcolor(X2 * scl.x, X3 * scl.x, weight1)
+    xlim(lim.x); ylim(lim.y); clim([0, 1])
+    xlabel(lbl.x); ylabel(lbl.y)
+    clb = colorbar;
+    colormap(gca, colorcet(clm.w))
+    clb.Label.String = sprintf('Weight %s', track_name1);
+    clb.Location = 'southoutside';
+    pbaspect(ar)
+
+    if opts.save_plots
+        filename = sprintf('replication_weights%s.png', opts.suffix);
+        filename = fullfile(opts.direc_out, filename);
+        fprintf('Saving %s.\n', filename)
+        % saveas(gcf, filename)
+        print(gcf, filename, '-dpng', '-r96')
+    end
+end
+
+if (opts.show_plots || opts.save_plots) && not(flow_driven)
     max_j = quantile(abs(d2_int(:)), qnt);
     lim.j = [-1, 1] * max_j * scl.j;
 
     figure
-    set(gcf, 'PaperPosition', [0, 0, 13.2, 6.4], 'Position', ful)
-    t = tiledlayout(1, 2);
-    t.Title.String = sprintf('%sReplication Summary', title_pfx);
-    t.Title.FontSize = 1.5 * fts;
+    set(gcf, 'PaperPosition', [0, 0, 13.2, 6] * 2, 'Position', ful)
+    tiledlayout(1, 2);
+    % t.Title.String = sprintf('%sReplication Summary', title_pfx);
+    % t.Title.FontSize = fnts;
+    % t.Title.Color = cltx;
     ltr = opts.starting_letter;
 
-    nexttile
+    ax1 = nexttile;
     vs = 10;
-    text(0.04 - 0.01, 0.9, char(ltr), 'units', 'normalized', 'FontSize', fts * 0.8); ltr = ltr + 1;
+    text(0.04 - 0.01, 0.9, char(ltr), 'units', 'normalized', 'FontSize', fnts * 0.8); ltr = ltr + 1;
     hold on
     pcolor(X2_imag * scl.x, X3_imag * scl.x, arc.^ap * scl.arc)
     plot(bound_pts * scl.x, bound.A(bound_pts) * scl.x, 'k')
@@ -723,39 +830,52 @@ if (opts.show_plots || opts.save_plots(3)) && not(flow_driven)
     xlabel(lbl.x); ylabel(lbl.y)
     colormap(gca, colorcet(clm.arc))
     clb = colorbar;
+    clb.Color = cltx;
     clb.Label.String = lbl.arc;
+    clb.Label.Color = cltx;
     clb.Location = 'southoutside';
     pbaspect(ar)
 
-    nexttile
-    text(0.04, 0.9, char(ltr), 'units', 'normalized', 'FontSize', fts * 0.8)
+    ax2 = nexttile;
+    text(0.04, 0.9, char(ltr), 'units', 'normalized', 'FontSize', fnts * 0.8)
     hold on
     pcolor(X2_imag * scl.x, X3_imag * scl.x, d2_int * scl.j)
     plot(bound_pts * scl.x, bound.A(bound_pts) * scl.x, 'k')
     plot(bound_pts * scl.x, bound.B(bound_pts) * scl.x, '--k')
     quiver(x2_traj * scl.x, x3_traj * scl.x, ...
         d2_traj * scl.d * vs, d3_traj * scl.d * vs, 0, '.-r')
+    if num_tracks == 2
+        quiver(x2_traj_old * scl.x, x3_traj_old * scl.x, ...
+            d2_traj_old * scl.d * vs, d3_traj_old * scl.d * vs, 0, '.-r')
+    end
     xlim(lim.x); ylim(lim.y)
     yticks([])
     xlabel(lbl.x)
     colormap(gca, colorcet(clm.j))
     clb = colorbar;
+    clb.Color = cltx;
     clb.Label.String = lbl.j;
+    clb.Label.Color = cltx;
     clb.Location = 'southoutside';
     clim(lim.j)
     pbaspect(ar)
     rectangle('Position', [lim.x(1) + range(lim.x) * 0.7, lim.y(1), range(lim.x) * 0.3, ...
         range(lim.y) / 8], 'FaceColor', 'w', 'FaceAlpha', 0.7, 'EdgeColor', 'none')
     quiver(lim.x(1) + 1.03 * range(lim.x) * 0.7, lim.y(1) + range(lim.y) / 16, ...
-        vs, 0, 0, '.-r', 'LineWidth', lw)
+        vs, 0, 0, '.-r', 'LineWidth', linw)
     text(lim.x(1) + 1.12 * range(lim.x) * 0.7, lim.y(1) + range(lim.y) / 16, ...
-        sprintf('%.0f %s', 1, unt.d), 'FontSize', fts)
+        sprintf('%.0f %s', 1, unt.d), 'FontSize', fnts)
 
-    if opts.save_plots(3)
+    set(gcf, 'Color', clbg, 'InvertHardcopy', 'off')
+    set([ax1, ax2], 'GridColor', cltx, 'MinorGridColor', cltx, ...
+        'XColor', cltx, 'YColor', cltx, 'ZColor', cltx)
+
+    if opts.save_plots
         filename = sprintf('replication_summary%s.png', opts.suffix);
         filename = fullfile(opts.direc_out, filename);
         fprintf('Saving %s.\n', filename)
-        saveas(gcf, filename)
+        % saveas(gcf, filename)
+        print(gcf, filename, '-dpng', '-r96')
     end
 end
 
@@ -893,9 +1013,9 @@ v3_traj_pv = v3_traj_p * scl.vec / scl.v;
 v2_p = (v2 + opts.plot_bg * v_bg(1)) * scl.v;
 v3_p = (v3 + opts.plot_bg * v_bg(2)) * scl.v;
 
-if opts.show_plots || opts.save_plots(3)
+if opts.show_plots || opts.save_plots
     figure
-    set(gcf, 'PaperPosition', [0, 0, 13.2, 6.4], 'Position', ful)
+    set(gcf, 'PaperPosition', [0, 0, 13.2, 6.4] * 2, 'Position', ful)
     tiledlayout(3, 3);
     ltr = opts.starting_letter;
 
@@ -913,7 +1033,7 @@ if opts.show_plots || opts.save_plots(3)
     % row 1
     nexttile
     title('Interpolated flow')
-    text(0.04, 0.9, char(ltr), 'units', 'normalized', 'FontSize', fts * 0.8); ltr = ltr + 1;
+    text(0.04, 0.9, char(ltr), 'units', 'normalized', 'FontSize', fnts * 0.8); ltr = ltr + 1;
     hold on
     pcolor(X2 * scl.x, X3 * scl.x, v2_int_p)
     quiver(x2_traj_p * scl.x, x3_traj_p * scl.x, v2_traj_pv, v3_traj_pv, 0, '.-r')
@@ -928,7 +1048,7 @@ if opts.show_plots || opts.save_plots(3)
 
     nexttile
     title('Helmholtz decomposition')
-    text(0.04, 0.9, char(ltr), 'units', 'normalized', 'FontSize', fts * 0.8); ltr = ltr + 1;
+    text(0.04, 0.9, char(ltr), 'units', 'normalized', 'FontSize', fnts * 0.8); ltr = ltr + 1;
     hold on
     pcolor(X2 * scl.x, X3 * scl.x, v2_p)
     quiver(x2_traj_p * scl.x, x3_traj_p * scl.x, v2_traj_pv, v3_traj_pv, 0, '.-r')
@@ -939,7 +1059,7 @@ if opts.show_plots || opts.save_plots(3)
 
     nexttile
     title('Difference & Potential')
-    text(0.04, 0.9, char(ltr), 'units', 'normalized', 'FontSize', fts * 0.8); ltr = ltr + 1;
+    text(0.04, 0.9, char(ltr), 'units', 'normalized', 'FontSize', fnts * 0.8); ltr = ltr + 1;
     hold on
     pcolor(X2 * scl.x, X3 * scl.x, v2_err * scl.v)
     quiver(x2_traj_p * scl.x, x3_traj_p * scl.x, v2_traj_pv, v3_traj_pv, 0, '.-r')
@@ -953,7 +1073,7 @@ if opts.show_plots || opts.save_plots(3)
 
     %row 2
     nexttile
-    text(0.04, 0.9, char(ltr), 'units', 'normalized', 'FontSize', fts * 0.8); ltr = ltr + 1;
+    text(0.04, 0.9, char(ltr), 'units', 'normalized', 'FontSize', fnts * 0.8); ltr = ltr + 1;
     hold on
     pcolor(X2 * scl.x, X3 * scl.x, v3_int_p)
     quiver(x2_traj_p * scl.x, x3_traj_p * scl.x, v2_traj_pv, v3_traj_pv, 0, '.-r')
@@ -967,7 +1087,7 @@ if opts.show_plots || opts.save_plots(3)
     pbaspect(ar)
 
     nexttile
-    text(0.04, 0.9, char(ltr), 'units', 'normalized', 'FontSize', fts * 0.8); ltr = ltr + 1;
+    text(0.04, 0.9, char(ltr), 'units', 'normalized', 'FontSize', fnts * 0.8); ltr = ltr + 1;
     hold on
     pcolor(X2 * scl.x, X3 * scl.x, v3_p)
     quiver(x2_traj_p * scl.x, x3_traj_p * scl.x, v2_traj_pv, v3_traj_pv, 0, '.-r')
@@ -977,7 +1097,7 @@ if opts.show_plots || opts.save_plots(3)
     pbaspect(ar)
 
     nexttile
-    text(0.04, 0.9, char(ltr), 'units', 'normalized', 'FontSize', fts * 0.8); ltr = ltr + 1;
+    text(0.04, 0.9, char(ltr), 'units', 'normalized', 'FontSize', fnts * 0.8); ltr = ltr + 1;
     hold on
     pcolor(X2 * scl.x, X3 * scl.x, v3_err * scl.v)
     quiver(x2_traj_p * scl.x, x3_traj_p * scl.x, v2_traj_pv, v3_traj_pv, 0, '.-r')
@@ -991,7 +1111,7 @@ if opts.show_plots || opts.save_plots(3)
 
     % row 3
     nexttile
-    text(0.04, 0.9, char(ltr), 'units', 'normalized', 'FontSize', fts * 0.8); ltr = ltr + 1;
+    text(0.04, 0.9, char(ltr), 'units', 'normalized', 'FontSize', fnts * 0.8); ltr = ltr + 1;
     hold on
     pcolor(X2 * scl.x, X3 * scl.x, divv_int * scl.dv)
     colormap(gca, colorcet(clm.dv))
@@ -1003,7 +1123,7 @@ if opts.show_plots || opts.save_plots(3)
     pbaspect(ar)
 
     nexttile
-    text(0.04, 0.9, char(ltr), 'units', 'normalized', 'FontSize', fts * 0.8); ltr = ltr + 1;
+    text(0.04, 0.9, char(ltr), 'units', 'normalized', 'FontSize', fnts * 0.8); ltr = ltr + 1;
     hold on
     pcolor(X2 * scl.x, X3 * scl.x, fac_divE * scl.j)
     colormap(gca, colorcet(clm.j))
@@ -1016,7 +1136,7 @@ if opts.show_plots || opts.save_plots(3)
     pbaspect(ar)
 
     nexttile
-    text(0.04, 0.9, char(ltr), 'units', 'normalized', 'FontSize', fts * 0.8)
+    text(0.04, 0.9, char(ltr), 'units', 'normalized', 'FontSize', fnts * 0.8)
     hold on
     pcolor(X2 * scl.x, X3 * scl.x, bc * scl.p)
     colormap(gca, colorcet(clm.p))
@@ -1028,17 +1148,18 @@ if opts.show_plots || opts.save_plots(3)
     xlabel(lbl.x)
     pbaspect(ar)
 
-    if opts.save_plots(3)
+    if opts.save_plots
         filename = sprintf('replication_summary%s.png', opts.suffix);
         filename = fullfile(opts.direc_out, filename);
         fprintf('Saving %s.\n', filename)
-        saveas(gcf, filename)
+        % saveas(gcf, filename)
+        print(gcf, filename, '-dpng', '-r96')
     end
 end
 
-if opts.show_plots || opts.save_plots(4)
+if opts.show_plots || opts.save_plots
     figure
-    set(gcf, 'PaperPosition', [0, 0, 13.2, 4.5], 'Position', ful)
+    set(gcf, 'PaperPosition', [0, 0, 13.2, 4.5] * 2, 'Position', ful)
     tiledlayout(1, 3);
     ltr = opts.starting_letter;
 
@@ -1072,12 +1193,12 @@ if opts.show_plots || opts.save_plots(4)
 
     nexttile
     title('Input flow')
-    text(0.04, 0.9, char(ltr), 'units', 'normalized', 'FontSize', fts * 0.8); ltr = ltr + 1;
+    text(0.04, 0.9, char(ltr), 'units', 'normalized', 'FontSize', fnts * 0.8); ltr = ltr + 1;
     hold on
     pcolor(X2 * scl.x, X3 * scl.x, hsv_alt);
     quiver(x2_traj_p * scl.x, x3_traj_p * scl.x, v2_traj_pv, v3_traj_pv, 0, '.-r')
     quiver(60, -51, 1e3 * scl.vec, 0, 0, '.-r')
-    text(75, -50, '1 km/s', 'FontSize', 0.8 * fts, 'Color', 'w')
+    text(75, -50, '1 km/s', 'FontSize', 0.8 * fnts, 'Color', 'w')
     contour(X2_imag * scl.x, X3_imag * scl.x, arc.^ap * scl.arc, 4, '--k')
     colormap(gca, hsv_alt_map)
     clb = colorbar;
@@ -1094,7 +1215,7 @@ if opts.show_plots || opts.save_plots(4)
 
     nexttile
     title('Input - interpolated flow')
-    text(0.04, 0.9, char(ltr), 'units', 'normalized', 'FontSize', fts * 0.8); ltr = ltr + 1;
+    text(0.04, 0.9, char(ltr), 'units', 'normalized', 'FontSize', fnts * 0.8); ltr = ltr + 1;
     hold on
     pcolor(X2 * scl.x, X3 * scl.x, hsv_alt_err);
     contour(X2 * scl.x, X3 * scl.x, double(mask), [0.5, 0.5], '--k')
@@ -1115,7 +1236,7 @@ if opts.show_plots || opts.save_plots(4)
 
     nexttile
     title('Input potential')
-    text(0.04, 0.9, char(ltr), 'units', 'normalized', 'FontSize', fts * 0.8)
+    text(0.04, 0.9, char(ltr), 'units', 'normalized', 'FontSize', fnts * 0.8)
     hold on
     pcolor(X2 * scl.x, X3 * scl.x, bc * scl.p)
     colormap(gca, colorcet(clm.p))
@@ -1127,53 +1248,14 @@ if opts.show_plots || opts.save_plots(4)
     xlabel(lbl.x)
     pbaspect(ar)
 
-    if opts.save_plots(4)
+    if opts.save_plots
         filename = sprintf('replication_flow%s.png', opts.suffix);
         filename = fullfile(opts.direc_out, filename);
         fprintf('Saving %s.\n', filename)
-        saveas(gcf, filename)
+        % saveas(gcf, filename)
+        print(gcf, filename, '-dpng', '-r96')
     end
 
-end
-
-if (opts.show_plots || opts.save_plots(5)) && num_tracks == 2
-    figure
-    set(gcf, 'PaperPosition', [0, 0, 13.2, 5], 'Position', ful)
-    t = tiledlayout(1, 2);
-    t.Title.String = 'Weighting Maps';
-    t.Title.FontSize = 1.5 * fts;
-    ltr = opts.starting_letter;
-
-    nexttile
-    text(0.04 - 0.01, 0.9, char(ltr), 'units', 'normalized', 'FontSize', fts * 0.8); ltr = ltr + 1;
-    hold on
-    pcolor(X2 * scl.x, X3 * scl.x, weight0)
-    xlim(lim.x); ylim(lim.y); clim([0, 1])
-    xlabel(lbl.x); ylabel(lbl.y)
-    clb = colorbar;
-    colormap(gca, colorcet(clm.w))
-    clb.Label.String = sprintf('Weight %s', track_name0);
-    clb.Location = 'southoutside';
-    pbaspect(ar)
-
-    nexttile
-    text(0.04 - 0.01, 0.9, char(ltr), 'units', 'normalized', 'FontSize', fts * 0.8)
-    hold on
-    pcolor(X2 * scl.x, X3 * scl.x, weight1)
-    xlim(lim.x); ylim(lim.y); clim([0, 1])
-    xlabel(lbl.x); ylabel(lbl.y)
-    clb = colorbar;
-    colormap(gca, colorcet(clm.w))
-    clb.Label.String = sprintf('Weight %s', track_name1);
-    clb.Location = 'southoutside';
-    pbaspect(ar)
-
-    if opts.save_plots(5)
-        filename = sprintf('replication_weights%s.png', opts.suffix);
-        filename = fullfile(opts.direc_out, filename);
-        fprintf('Saving %s.\n', filename)
-        saveas(gcf, filename)
-    end
 end
 
 if ~opts.show_plots

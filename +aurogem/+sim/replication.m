@@ -58,6 +58,8 @@ end
 
 for sat = sats
     if strcmp(tracks_pos_type , 'linear')
+        disp(file_track)
+        disp(['/', sat, '/Coordinates/Magnetic/East'])
         tmp.pos(:, 1) = h5read(file_track, ['/', sat, '/Coordinates/Magnetic/East']);
         tmp.pos(:, 2) = h5read(file_track, ['/', sat, '/Coordinates/Magnetic/North']);
     elseif strcmp(tracks_pos_type , 'angular')
@@ -75,9 +77,6 @@ end
 
 %% replicate
 plot_suffix = strrep(strip(char(cfg.plot_suffix), '_'), ' ', '');
-if ~isempty(plot_suffix)
-    plot_suffix = ['_', plot_suffix];
-end
 direc_out = fullfile(direc, 'output');
 if ~exist(direc_out, 'dir')
     mkdir(direc_out)
@@ -103,6 +102,16 @@ if isfield(cfg, 'driver')
 else
     driver = 'flow';
     file_bc = 'potential.h5';
+end
+if isfield(cfg, 'do_scale')
+    do_scale = cfg.do_scale;
+else
+    do_scale = true;
+end
+if isfield(cfg, 'track_shift')
+    track_shift = cfg.track_shift;
+else
+    track_shift = 0;
 end
 boundaries = nan(2, 2, 1);
 if isfield(cfg, 'boundary_directory')
@@ -132,7 +141,8 @@ end
     , arc_definition = cfg.arc_definition ...
     , edge_method = "contour" ...
     , do_rotate = true ...
-    , do_scale = true ...
+    , do_scale = do_scale ...
+    , track_shift = track_shift ...
     , contour_values = cfg.contour_values ...
     , harmonic_mask = cfg.harmonic_mask ...
     , weighting_scale_length = wsl ...

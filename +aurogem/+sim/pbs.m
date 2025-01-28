@@ -29,6 +29,7 @@ arguments
     opts.num_nodes (1, 1) int32 {mustBePositive} = 96
     opts.max_hours (1, 1) double {mustBePositive} = 5
     opts.type (1, 1) string {mustBeMember(opts.type, ["bro", "has", "ivy", "san"])} = "bro"
+    opts.group_list (1, :) char = ''
 end
 
 %% init
@@ -118,6 +119,9 @@ fprintf(fid, '%s -l walltime=%i:%02d:%02d\n', batch_cmd, wall_h, wall_m, wall_s)
 fprintf(fid, '%s -o %s.out\n', batch_cmd, sim_name);
 fprintf(fid, '%s -e %s.err\n', batch_cmd, sim_name);
 fprintf(fid, '%s -V\n', batch_cmd);
+if not(isempty(opts.group_list))
+    fprintf(fid, '%s -W group_list=%s\n', batch_cmd, opts.group_list);
+end
 
 fprintf(fid, '\n# CPU divisions:\n');
 for id = [1, fid]

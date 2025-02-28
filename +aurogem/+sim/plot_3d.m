@@ -1,36 +1,37 @@
+% Description:
+%   Make 3D visualizations of GEMINI simulations including top-boundary FAC
+%   slice, central density slice, sparse electric field vectors, track data, and
+%   current flux tubes. Tubes parameters are configured in
+%   <direc>/plots3d/flux_tube_config.nml (see README.md for details).
+%
+% Contact:
+%   jules.van.irsel.gr@dartmouth.edu
+%
+% Revisions:
+%   02/28/2025  initial implementation (jvi)
+%
+
 %#ok<*UNRCH>
 
+% simulations directories
 direc_root = fullfile('..', 'public_html', 'Gemini3D');
 direc = fullfile(direc_root, 'swop_20230210_35487_AC_09_unacc_SD');
-% direc = fullfile(direc_root, 'swop_20230212_37331_C_09_unacc_SD');
-% direc = fullfile(direc_root, 'swop_20230304_27012_C_09_SD');
-% direc = fullfile(direc_root, 'swop_20230304_36829_B_09_unacc_SD');
-% direc = fullfile(direc_root, 'swop_20230314_24547_A_09');
-% direc = fullfile(direc_root, 'swop_20230319_30210_B_09_SD');
-% direc_compare = fullfile(direc_root, 'swop_20230304_27012_C_09_SD');
-% direc_compare = fullfile(direc_root, 'swop_20230210_35487_AC_09_unacc_SD');
-direc_compare = '';
-% sffxs = ["_A_09", "_A_09_nobg", "_A_09_SD", "_AC_09", "_A_09_SD", "_AC_09_SD"];
+direc_compare = ''; % when comparing tubes of two simulations
 
-% for sss = sffxs
-% clear('dat')
-% direc = fullfile(direc_root, ['swop_20230210_35487', char(sss)]);
-for vind = 1
-for theta = 290:5:360
 % plotting parameters
-save_plot = 1;
-reload_tubes = 1;
-reload_grid = 0;
-reload_data = 0;
-do_tubes = 1:3;
-draft = 0;
+vinds = 1:3; % view angles to plot (1=iso, 2=side, 3=top)
+spins = 0:5:360; % for spinning animation (°)
+save_plot = true;
+reload_tubes = true; % when only changing plotting parameters
+reload_grid = false; % when only changing simulation data
+reload_data = false; % when only changing tube configuration
+tube_list = 1:3;
 debug = 0;
-plot_ne_slice = 1;
 sffx = ["iso", "side", "top"];
 fntn = 'Arial'; % font name
 fnts = 18 * 2; % font size
 linw = 2; % line width
-angl = [[-30 + theta, 32]; [-90, 0]; [0, 90]]; % view angle (°)
+angl = [[-30, 32]; [-90, 0]; [0, 90]]; % view angle (°)
 qntl = 0.95; % colorbar range quantile
 pprw = [8.5, 4, 4] * 2; % paper width (inches)
 pprh = [7, 4, 3] * 2; % paper height (inches)
@@ -39,25 +40,32 @@ clc0 = [0.0, 0.0, 0.0]; % start curve color (rgb)
 clc1 = [0.0, 0.0, 0.8]; % end curve color (rgb)
 clef = [0.0, 1.0, 1.0]; % electric field color (rgb)
 cltd = [1.0, 0.4, 1.0]; % track data color (rgb)
-% clbg = [13, 53, 18] / 255; % background color (rgb)
-% clbg = [159, 64, 17] / 255;
-clbg = [20, 21, 20] / 255;
-% clbg = [221, 221, 221] / 255;
-% clbg = [1, 0, 1];
+clbg = [20, 21, 20] / 255; % background color (rgb)
 cltx = [1, 1, 1]; % text color (rgb)
-% cltx = [0, 0, 0];
 stlo = 0.3; % flux tube opacity
 offs = 0.5; % projection line offset (km)
 xrot = [18, 0, 0]; % x label rotation (deg)
 yrot = [-45, 0, 90]; % y label rotation (deg)
 track_data_type = 'current'; % type of track data to plot
-% limn = [9.3, 11.6]; % density limits override
+
+% compare tubes
+if exist(fullfile(direc_compare, 'config.nml'), 'file')
+    do_compare = true;
+else
+    do_compare = false;
+end
 
 % load fluxtube parameters
 if reload_tubes || not(exist('tube_pars', 'var'))
     [base, tube_pars] = aurogem.tools.flux_tube_pars(direc);
 end
 
+% animation sping angle
+for spin = spins
+angl(:, 1) = angl(:, 1) + spin;
+
+% view angles
+for vind = vinds
 zoom = base.zoom; % camera zoom
 panx = base.panx; % pan right (°)
 pany = base.pany; % pan up (°)
@@ -70,18 +78,19 @@ panx = panx(vind);
 pany = pany(vind);
 xrot = xrot(vind);
 yrot = yrot(vind);
-do_compare = not(isempty(direc_compare));
+
 if do_compare
     sffx = [sffx_tmp, '_compare'];
-elseif exist('theta', 'var')
-    sffx = [sffx_tmp, '_', num2str(theta)];
+elseif exist('spin', 'var')
+    sffx = [sffx_tmp, '_', num2str(spin)];
 else
     sffx = sffx_tmp;
 end
+
 tube_names = fieldnames(tube_pars);
 ntubes = length(fieldnames(tube_pars));
 tube_pars_tmp = struct;
-for t = do_tubes
+for t = tube_list
     tube_pars_tmp.(tube_names{t}) = tube_pars.(tube_names{t});
 end
 tube_pars = tube_pars_tmp;
@@ -312,28 +321,18 @@ if vind ~=2
     end
 end
 
-if plot_ne_slice
-    % electron density slice
-    if vind ~= 3
-        ne_slice = permute(repmat(ne, [1, 1, length(x)]), [1, 3, 2]);
-        slice(axn, Xm, Ym, Zm, ne_slice, x(end), [], [])
-        colormap(axn, colorcet(clm.n))
-        clim(axn, lim.n)
-        if vind == 1
-            clb = colorbar(axn);
-            clb.Color = cltx;
-            clb.Label.String = sprintf('log_{10} n_e (%s)', unt.n);
-            clb.Label.Color = cltx;
-            clb.Position = [0.87, (1-2*clbh)/3, 0.015, clbh];
-        end
-    end
-else
-    % eastward current slice
-    if vind ~= 3
-        j2_slice = permute(repmat(j2, [1, 1, length(x)]), [1, 3, 2]);
-        slice(axj, Xm, Ym, Zm, j2_slice, x(end), [], [])
-        colormap(axj, colorcet(clm.j))
-        clim(axn, lim.j)
+% electron density slice
+if vind ~= 3
+    ne_slice = permute(repmat(ne, [1, 1, length(x)]), [1, 3, 2]);
+    slice(axn, Xm, Ym, Zm, ne_slice, x(end), [], [])
+    colormap(axn, colorcet(clm.n))
+    clim(axn, lim.n)
+    if vind == 1
+        clb = colorbar(axn);
+        clb.Color = cltx;
+        clb.Label.String = sprintf('log_{10} n_e (%s)', unt.n);
+        clb.Label.Color = cltx;
+        clb.Position = [0.87, (1-2*clbh)/3, 0.015, clbh];
     end
 end
 
@@ -353,7 +352,6 @@ if vind ~= 2
             vz_tmp = zeros(size(x_tmp));
         end
         quiver3(x_tmp, y_tmp, z_tmp, vx_tmp, vy_tmp, vz_tmp, '.-', 'Color', cltd)
-        % quiver3(x(1), y(end), z(end)*0.9, scl.qv, 0, 0, 0, '.-', 'Color', clfd)
     end
 end
 
@@ -361,10 +359,6 @@ end
 if vind ~= 2
     n_qx = 3;
     n_qy = 4;
-    % qx_ids = round(linspace(1/2/n_qx, 1-1/2/n_qx, n_qx)*length(x));
-    % qy_ids = round(linspace(1/2/n_qy, 1-1/2/n_qy, n_qy)*length(y));
-    % qx = round(linspace(1/2/n_qx, 1-1/2/n_qx, n_qx)*range(x));
-    % qy = round(linspace(1/2/n_qy, 1-1/2/n_qy, n_qy)*range(y));
     qx = linspace(-(n_qx - 1) / 2, (n_qx - 1) / 2, n_qx) * range(x) / n_qx;
     qy = linspace(-(n_qy - 1) / 2, (n_qy - 1) / 2, n_qy) * range(y) / n_qy;
     [~, qx_ids] = min(abs(x - qx));
@@ -424,9 +418,7 @@ if save_plot
     filename = fullfile(direc, 'plots3d', filename);
     fprintf('Saving %s\n', filename)
     print(fig, filename, '-dpng', '-r96');
-    % exportgraphics(fig, 'test.pdf', 'Resolution', 96, 'BackgroundColor', 'none', 'ContentType', 'vector')
     close all
 end
 end
 end
-% end

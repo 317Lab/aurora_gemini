@@ -60,6 +60,7 @@ color_top = [1.0, 0.7, 0.0];
 color_bottom = [71, 212, 90] / 255;
 color_swarm = [1, 0, 0];
 color_pfisr = [1, 0, 1];
+color_sdarn = [1, 0, 1];
 
 %% grid & config
 cfg = gemini3d.read.config(direc);
@@ -175,6 +176,8 @@ if plot_pfisr
         'Color', color_pfisr, 'LineWidth', 1, 'LineStyle', '-')
     text(pfisr_x(end), pfisr_y(end) + offsets(4), pfisr_z(end), 'PFISR', 'Color', color_pfisr)
 end
+% quiver3(-2500, -1900, 5600, -2500 + 0.00001, -1900, 5600, 0, 'Color', color_sdarn)
+text(-2800, -1600, 5600, 'SuperDARN', 'Color', color_sdarn)
 if opts.plot_earth
     surf(earth_x, earth_y, earth_z)
 else

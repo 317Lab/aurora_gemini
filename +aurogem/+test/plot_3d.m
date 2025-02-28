@@ -1,14 +1,22 @@
-direc_root = fullfile('..', 'public_html', 'Gemini3D');
-% direc = fullfile(direc_root, 'swop_20230210_35487_AC_09_SD');
-% direc = fullfile(direc_root, 'swop_20230210_35487_A_09_nobg');
-direc = fullfile(direc_root, 'swop_20230210_35487_A_09');
-% direc = fullfile(direc_root, 'swop_20230314_24547_A_09');
-% direc_compare = fullfile(direc_root, 'swop_20230210_35487_A_09');
-direc_compare = '';
 %#ok<*UNRCH>
 
+direc_root = fullfile('..', 'public_html', 'Gemini3D');
+direc = fullfile(direc_root, 'swop_20230210_35487_AC_09_unacc_SD');
+% direc = fullfile(direc_root, 'swop_20230212_37331_C_09_unacc_SD');
+% direc = fullfile(direc_root, 'swop_20230304_27012_C_09_SD');
+% direc = fullfile(direc_root, 'swop_20230304_36829_B_09_unacc_SD');
+% direc = fullfile(direc_root, 'swop_20230314_24547_A_09');
+% direc = fullfile(direc_root, 'swop_20230319_30210_B_09_SD');
+% direc_compare = fullfile(direc_root, 'swop_20230304_27012_C_09_SD');
+% direc_compare = fullfile(direc_root, 'swop_20230210_35487_AC_09_unacc_SD');
+direc_compare = '';
+% sffxs = ["_A_09", "_A_09_nobg", "_A_09_SD", "_AC_09", "_A_09_SD", "_AC_09_SD"];
+
+% for sss = sffxs
+% clear('dat')
+% direc = fullfile(direc_root, ['swop_20230210_35487', char(sss)]);
 for vind = 1
-for theta = 0%0:5:360
+for theta = 290:5:360
 % plotting parameters
 save_plot = 1;
 reload_tubes = 1;
@@ -16,7 +24,9 @@ reload_grid = 0;
 reload_data = 0;
 do_tubes = 1:3;
 draft = 0;
-sffx = ["iso_light", "side", "top"];
+debug = 0;
+plot_ne_slice = 1;
+sffx = ["iso", "side", "top"];
 fntn = 'Arial'; % font name
 fnts = 18 * 2; % font size
 linw = 2; % line width
@@ -31,17 +41,17 @@ clef = [0.0, 1.0, 1.0]; % electric field color (rgb)
 cltd = [1.0, 0.4, 1.0]; % track data color (rgb)
 % clbg = [13, 53, 18] / 255; % background color (rgb)
 % clbg = [159, 64, 17] / 255;
-% clbg = [20, 21, 20] / 255;
+clbg = [20, 21, 20] / 255;
 % clbg = [221, 221, 221] / 255;
-clbg = [1, 0, 1];
-% cltx = [1, 1, 1]; % text color (rgb)
-cltx = [0, 0, 0];
+% clbg = [1, 0, 1];
+cltx = [1, 1, 1]; % text color (rgb)
+% cltx = [0, 0, 0];
 stlo = 0.3; % flux tube opacity
 offs = 0.5; % projection line offset (km)
 xrot = [18, 0, 0]; % x label rotation (deg)
 yrot = [-45, 0, 90]; % y label rotation (deg)
 track_data_type = 'current'; % type of track data to plot
-limn = [9.3, 11.6]; % density limits override
+% limn = [9.3, 11.6]; % density limits override
 
 % load fluxtube parameters
 if reload_tubes || not(exist('tube_pars', 'var'))
@@ -85,6 +95,8 @@ if not(exist('xg', 'var')) || reload_grid
     xg = gemini3d.read.grid(direc);
     xg = aurogem.tools.shrink(xg);
 end
+fprintf('Simulation grid loaded.\n')
+
 if not(exist('dat', 'var')) || reload_data
     dat = gemini3d.read.frame(direc, 'time', cfg.times(end) ...
         , 'vars', ["J1", "J2", "J3", "ne", "v2", "v3"]);
@@ -106,6 +118,8 @@ scl.qv = 1e-2;
 lim.x = base.limx;
 lim.y = base.limy;
 lim.z = base.limz;
+lim.n = base.limn;
+lim.j = base.limj;
 
 % unpack grid
 x = double(xg.x2(3:end-2) * scl.x);
@@ -128,8 +142,11 @@ dz = xg.dx1h(lbz:ubz) * scl.x;
 [dXm, dYm] = meshgrid(dx, dy);
 Bmag = mean(xg.Bmag(:));
 
-reverse_test_tolerance = min([dx; dy; dz]);
-ar = [range(x), range(y), range(z)];
+if any(isnan(base.ar))
+    ar = [range(x), range(y), range(z)];
+else
+    ar = base.ar;
+end
 
 % load track data
 track_fn = fullfile(direc, 'ext', 'tracks.h5');
@@ -143,6 +160,7 @@ end
 
 % unpack data
 j1 = squeeze(dat.J1(ubz, lbx:ubx, lby:uby))'*scl.j; % A/km^2 = uA/m^2
+j2 = squeeze(dat.J2(lbz:ubz, length(x)/2, lby:uby))'*scl.j; % A/km^2 = uA/m^2
 ne = log10(squeeze(dat.ne(lbz:ubz, length(x)/2, lby:uby))')*scl.n; % m^-3
 v2 = permute(squeeze(dat.v2(ubz-1:ubz, lbx:ubx, lby:uby)), [3, 2, 1])*scl.v; % km/s
 v3 = permute(squeeze(dat.v3(ubz-1:ubz, lbx:ubx, lby:uby)), [3, 2, 1])*scl.v; % km/s
@@ -157,7 +175,7 @@ if reload_tubes || not(exist('tubes', 'var'))
         tube_name = tp{1};
         fprintf('Loading tube %s...\n', tube_name)
         tubes.(tube_name) = aurogem.tools.current_flux_tube(xg, dat, ...
-            tube_pars.(tube_name), xlims = lim.x, ylims = lim.y, zlims = lim.z);
+            tube_pars.(tube_name), xlims = lim.x, ylims = lim.y, zlims = lim.z, debug=debug);
         if do_compare
             tubes_compare.(tube_name) = aurogem.tools.current_flux_tube(xg, dat_compare, ...
                 tube_pars.(tube_name), xlims = lim.x, ylims = lim.y, zlims = lim.z);
@@ -176,10 +194,10 @@ aurogem.tools.setall(0, 'FontSize', fnts)
 aurogem.tools.setall(0, 'Multiplier', 1)
 colorcet = @aurogem.tools.colorcet;
 
-lim.j = [-1, 1]*quantile(abs(j1(:)), qntl);
-if all(limn > 0)
-    lim.n = limn;
-else
+if any(isnan(lim.j))
+    lim.j = [-1, 1]*quantile(abs(j1(:)), qntl);
+end
+if any(isnan(lim.n))
     lim.n = [quantile(abs(ne(:)), 1-qntl), quantile(abs(ne(:)), qntl)];
 end
 
@@ -294,18 +312,28 @@ if vind ~=2
     end
 end
 
-% electron density slice
-if vind ~= 3
-    ne_slice = permute(repmat(ne, [1, 1, length(x)]), [1, 3, 2]);
-    slice(axn, Xm, Ym, Zm, ne_slice, x(end), [], [])
-    colormap(axn, colorcet(clm.n))
-    clim(axn, lim.n)
-    if vind == 1
-        clb = colorbar(axn);
-        clb.Color = cltx;
-        clb.Label.String = sprintf('log_{10} n_e (%s)', unt.n);
-        clb.Label.Color = cltx;
-        clb.Position = [0.87, (1-2*clbh)/3, 0.015, clbh];
+if plot_ne_slice
+    % electron density slice
+    if vind ~= 3
+        ne_slice = permute(repmat(ne, [1, 1, length(x)]), [1, 3, 2]);
+        slice(axn, Xm, Ym, Zm, ne_slice, x(end), [], [])
+        colormap(axn, colorcet(clm.n))
+        clim(axn, lim.n)
+        if vind == 1
+            clb = colorbar(axn);
+            clb.Color = cltx;
+            clb.Label.String = sprintf('log_{10} n_e (%s)', unt.n);
+            clb.Label.Color = cltx;
+            clb.Position = [0.87, (1-2*clbh)/3, 0.015, clbh];
+        end
+    end
+else
+    % eastward current slice
+    if vind ~= 3
+        j2_slice = permute(repmat(j2, [1, 1, length(x)]), [1, 3, 2]);
+        slice(axj, Xm, Ym, Zm, j2_slice, x(end), [], [])
+        colormap(axj, colorcet(clm.j))
+        clim(axn, lim.j)
     end
 end
 
@@ -333,8 +361,14 @@ end
 if vind ~= 2
     n_qx = 3;
     n_qy = 4;
-    qx_ids = round(linspace(1/2/n_qx, 1-1/2/n_qx, n_qx)*length(x));
-    qy_ids = round(linspace(1/2/n_qy, 1-1/2/n_qy, n_qy)*length(y));
+    % qx_ids = round(linspace(1/2/n_qx, 1-1/2/n_qx, n_qx)*length(x));
+    % qy_ids = round(linspace(1/2/n_qy, 1-1/2/n_qy, n_qy)*length(y));
+    % qx = round(linspace(1/2/n_qx, 1-1/2/n_qx, n_qx)*range(x));
+    % qy = round(linspace(1/2/n_qy, 1-1/2/n_qy, n_qy)*range(y));
+    qx = linspace(-(n_qx - 1) / 2, (n_qx - 1) / 2, n_qx) * range(x) / n_qx;
+    qy = linspace(-(n_qy - 1) / 2, (n_qy - 1) / 2, n_qy) * range(y) / n_qy;
+    [~, qx_ids] = min(abs(x - qx));
+    [~, qy_ids] = min(abs(y - qy));
     Xm_q = Xm(qy_ids, qx_ids, 1:2);
     Ym_q = Ym(qy_ids, qx_ids, 1:2);
     Zm_q = Zm(qy_ids, qx_ids, 1:2);
@@ -395,3 +429,4 @@ if save_plot
 end
 end
 end
+% end

@@ -15,38 +15,67 @@
 
 % simulations directories
 direc_root = fullfile('..', 'public_html', 'Gemini3D');
-direc = fullfile(direc_root, 'swop_20230210_35487_AC_09_unacc_SD');
+% direc = fullfile(direc_root, 'swop_20230210_35487_AC_09_SD');
+direc = fullfile(direc_root, 'swop_20230210_35487_AC_09');
+% direc = fullfile(direc_root, 'swop_20230210_35487_AC_09_unacc_SD');
+% direc = fullfile(direc_root, 'swop_20230210_35487_A_09_nobg');
 direc_compare = ''; % when comparing tubes of two simulations
 
 % plotting parameters
 vinds = 1:3; % view angles to plot (1=iso, 2=side, 3=top)
-spins = 0:5:360; % for spinning animation (°)
+spins = 0; %0:5:360; % for spinning animation (°)
 save_plot = true;
 reload_tubes = true; % when only changing plotting parameters
 reload_grid = false; % when only changing simulation data
 reload_data = false; % when only changing tube configuration
+publish_format = 'paper'; % paper or poster
 tube_list = 1:3;
 debug = 0;
+
+for vind = vinds
+for spin = spins
+angl = [[-30, 32]; [-90, 0]; [0, 90]]; % view angle (°)
 sffx = ["iso", "side", "top"];
 fntn = 'Arial'; % font name
-fnts = 18 * 2; % font size
-linw = 2; % line width
-angl = [[-30, 32]; [-90, 0]; [0, 90]]; % view angle (°)
 qntl = 0.95; % colorbar range quantile
-pprw = [8.5, 4, 4] * 2; % paper width (inches)
-pprh = [7, 4, 3] * 2; % paper height (inches)
 clbh = 0.43; % colorbar height (relative)
 clc0 = [0.0, 0.0, 0.0]; % start curve color (rgb)
 clc1 = [0.0, 0.0, 0.8]; % end curve color (rgb)
 clef = [0.0, 1.0, 1.0]; % electric field color (rgb)
+cleb = [1.0, 1.0, 0.0]; % electric field background (rgb)
 cltd = [1.0, 0.4, 1.0]; % track data color (rgb)
-clbg = [20, 21, 20] / 255; % background color (rgb)
-cltx = [1, 1, 1]; % text color (rgb)
 stlo = 0.3; % flux tube opacity
 offs = 0.5; % projection line offset (km)
-xrot = [18, 0, 0]; % x label rotation (deg)
-yrot = [-45, 0, 90]; % y label rotation (deg)
+idef = 3; % electric field legend vind (1, 3)
+lnef = 20; % length of electric field background vector (km)
 track_data_type = 'current'; % type of track data to plot
+
+if strcmp(publish_format, 'paper')
+    fnts = 10 * 2; % font size
+    linw = 1.5; % line width
+    pprw = [6.5, 2.58, 3.92] * 2; % paper width (inches)
+    pprh = [5, 3.02, 3.02] * 2; % paper height (inches)
+    clbx = 0.9; % colorbar horizontal position
+    clbg = [255, 255, 255] / 255; % background color (rgb)
+    % clbg = [221, 221, 221] / 255;
+    % clbg = [54, 54, 54] / 255;
+    cltx = [0, 0, 0]; % text color (rgb)
+    % cltx = [1, 1, 1];
+    xrot = [18, 0, 0]; % x label rotation (deg)
+    yrot = [-45, 0, 90]; % y label rotation (deg)
+    sffx = sffx + "-p";
+else
+    fnts = 18 * 2; % font size
+    linw = 2; % line width
+    pprw = [8.5, 4, 4] * 2; % paper width (inches)
+    pprh = [7, 4, 3] * 2; % paper height (inches)
+    clbx = 0.87; % colorbar horizontal position
+    clbg = [20, 21, 20] / 255; % background color (rgb)
+    cltx = [1, 1, 1]; % text color (rgb)
+    xrot = [18, 0, 0]; % x label rotation (deg)
+    yrot = [-45, 0, 90]; % y label rotation (deg)
+    % sffx = sffx + "-test";
+end
 
 % compare tubes
 if exist(fullfile(direc_compare, 'config.nml'), 'file')
@@ -61,11 +90,9 @@ if reload_tubes || not(exist('tube_pars', 'var'))
 end
 
 % animation sping angle
-for spin = spins
 angl(:, 1) = angl(:, 1) + spin;
 
 % view angles
-for vind = vinds
 zoom = base.zoom; % camera zoom
 panx = base.panx; % pan right (°)
 pany = base.pany; % pan up (°)
@@ -118,6 +145,7 @@ fprintf('Simulation data loaded.\n')
 
 scl.x = 1e-3;  unt.x = 'km';
 scl.e = 1e3;   unt.e = 'mV/m';
+scl.qe = 2;
 scl.f = 1e-3;  unt.f = 'kA';
 scl.n = 1e0;   unt.n = 'm^{-3}'; clm.n = 'L9';
 scl.j = 1e6;   unt.j = 'uA/m^2'; clm.j = 'D1A';
@@ -177,6 +205,14 @@ E2 = -v3*Bmag*scl.e/scl.v; % mV/m
 E3 = v2*Bmag*scl.e/scl.v; % mV/m
 E2(:, :, 1) = nan;
 E3(:, :, 1) = nan;
+
+% unpack background electric field data
+E_bg_filename = fullfile(direc, cfg.E0_dir, gemini3d.datelab(cfg.times(end)) + '.h5');
+E2_bg = h5read(E_bg_filename, '/Exit');
+E3_bg = h5read(E_bg_filename, '/Eyit');
+E2_bg = median(E2_bg(:)) * scl.e;
+E3_bg = median(E3_bg(:)) * scl.e;
+scl.qe = lnef / vecnorm([E2_bg, E3_bg]);
 
 % generate current flux tubes
 if reload_tubes || not(exist('tubes', 'var'))
@@ -317,7 +353,7 @@ if vind ~=2
         clb.Color = cltx;
         clb.Label.String = sprintf('j_{||} (%s)', unt.j);
         clb.Label.Color = cltx;
-        clb.Position = [0.87, clbh+2*(1-2*clbh)/3, 0.015, clbh];
+        clb.Position = [clbx, clbh+2*(1-2*clbh)/3, 0.015, clbh];
     end
 end
 
@@ -332,7 +368,7 @@ if vind ~= 3
         clb.Color = cltx;
         clb.Label.String = sprintf('log_{10} n_e (%s)', unt.n);
         clb.Label.Color = cltx;
-        clb.Position = [0.87, (1-2*clbh)/3, 0.015, clbh];
+        clb.Position = [clbx, (1-2*clbh)/3, 0.015, clbh];
     end
 end
 
@@ -366,15 +402,17 @@ if vind ~= 2
     Xm_q = Xm(qy_ids, qx_ids, 1:2);
     Ym_q = Ym(qy_ids, qx_ids, 1:2);
     Zm_q = Zm(qy_ids, qx_ids, 1:2);
-    E2_q = E2(qy_ids, qx_ids, :);
-    E3_q = E3(qy_ids, qx_ids, :);
-    E1_q = zeros(size(E2_q));
-    quiver3(Xm_q, Ym_q, Zm_q, E2_q, E3_q, E1_q, 0.8, 'Color', clef, 'MarkerSize', 2)
-    if vind == 1
-        anne = vecnorm([E2_q(1, 1, 2), E3_q(1, 1, 2), E1_q(1, 1, 2)]);
-        text(Xm_q(1, 1, 2)*0.95, Ym_q(1, 1, 2)*1.05, Zm_q(1, 1, 2)*1.05, ...
-            sprintf('%.0f %s', anne, unt.e), 'Color', clef, 'FontSize', fnts * 0.8, ...
-            'HorizontalAlignment', 'left', 'BackgroundColor', [clbg 0.5])
+    E2_q = E2(qy_ids, qx_ids, :) * scl.qe;
+    E3_q = E3(qy_ids, qx_ids, :) * scl.qe;
+    E1_q = zeros(size(E2_q)) * scl.qe;
+    quiver3(Xm_q, Ym_q, Zm_q, E2_q, E3_q, E1_q, 0, 'Color', clef, 'MaxHeadSize', 1)
+    quiver3(Xm_q(1, 1, 2), Ym_q(1, 1, 2), Zm_q(1, 1, 2), E2_bg * scl.qe, E3_bg * scl.qe, 0, 0, 'Color', cleb, 'MaxHeadSize', 1)
+    if vind == idef
+        % anne = vecnorm([E2_q(1, 1, 2), E3_q(1, 1, 2), E1_q(1, 1, 2)]);
+        anne = vecnorm([E2_bg, E3_bg]);
+        text(Xm_q(1, 1, 2)*1.1, Ym_q(1, 1, 2)*1.15, Zm_q(1, 1, 2)*1.02, ...
+            sprintf('%.1f %s', anne, unt.e), 'Color', cleb, 'FontSize', fnts * 0.6, ...
+            'HorizontalAlignment', 'right', 'BackgroundColor', [0, 0, 0, 0.5])
     end
 end
 

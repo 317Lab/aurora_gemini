@@ -17,7 +17,7 @@ end
 for env = envs
     filename = fullfile('data', 'init', env(1));
     if not(isempty(getenv(env(1))))
-        warning('Overwriting environment variable %s with contents of %s', ...
+        warning('Overwriting MATLAB environment variable %s with contents of %s', ...
             env(1), filename)
     end
     fid = fopen(filename, 'r');

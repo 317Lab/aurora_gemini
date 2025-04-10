@@ -14,6 +14,7 @@ end
 
 % unpack grid
 scl.x = 1e-3;
+unt.x = 'km';
 x = double(xg.x2(3:end-2)*scl.x);
 y = double(xg.x3(3:end-2)*scl.x);
 z = double(xg.x1(3:end-2)*scl.x);
@@ -47,16 +48,18 @@ v1 = pars.v1;
 resolution = pars.resolution;
 do_reverse = pars.do_reverse;
 split_factor = pars.split_factor;
+kink_check = pars.kink_check;
 
 % tolerance values
 gap_tolerance = 2 * min([dx; dy; dz]);
 split_tube_tolerance = split_factor * pi * r0 * r1 / resolution;
 max_diff = gap_tolerance * pars.max_diff_factor;
+min_kink_deg = 45;
 
 if opts.debug
-    fprintf('gap_tolerance = %.3f\n', gap_tolerance)
-    fprintf('split_tube_tolerance = %.3f\n', split_tube_tolerance)
-    fprintf('max_diff = %.3f\n', max_diff)
+    fprintf('gap_tolerance = %.3f %s\n', gap_tolerance, unt.x)
+    fprintf('split_tube_tolerance = %.3f %s\n', split_tube_tolerance, unt.x)
+    fprintf('max_diff = %.3f %s\n', max_diff, unt.x)
 end
 
 % starting curve
@@ -102,6 +105,14 @@ end
 
 % check for split tube
 c1(abs(vecnorm(diff(c1)')) > split_tube_tolerance) = nan;
+
+if kink_check && all(range(c1) > gap_tolerance) % check for non-flat curve
+    fprintf('Kink detected.\n')
+    c1_nhat = diff(c1) ./ vecnorm(diff(c1)')';
+    c1_angles = acosd(dot(c1_nhat(2:end,:), c1_nhat(1:end-1,:), 2));
+    c1(circshift(c1_angles > min_kink_deg, 1)) = nan; % check for sharp angles
+end
+
 if ~any(isnan(c1))
     split = false;
 else

@@ -1,17 +1,23 @@
-%%% OLD DONT USE
 %% user input
-direc = fullfile('..', 'Jules', 'thesis', 'data', 'paper2');
-events_ids = 9;
+event_ids = 4;
+sats = 'AC';
 sim_version = 9;
-suffix = '_Ap';
+suffix = 'RWM';
+min_scale_length = 16e3; % m
+track_window = 60; % s
+track_shift = [0, 0]; % CAUTION
+% track_shift = [0.04, 0.00]; % CAUTION
+max_flow = 3e3; % m/s
+driver = 'current';
 boundary_sim = '';
 do_acc = true;
-do_bg_flow = true;
-min_scale_length = 16e3; % m
-track_window = 30; % s
-max_flow = 5e3; % m/s
-driver = 'current'; % flow or current
+check_consecutive_efi = false;
+background_flow_source = 'superdarn'; % superdarn, pfisr, none
+Ap_override = 42; % negative = no override
 
+function setup()
+
+%% generate config structs
 sim.tdur = 60; % s
 sim.dtout = 5; % s
 sim.alt_scale = '5150, 4850, 250000, 30000'; % m
@@ -28,23 +34,45 @@ rep.fit_harmonic_function = 1;
 rep.replication_number = 400;
 rep.arc_definition = 'Hall';
 rep.harmonic_mask = [30e3, 30e3, 40e3]; % m
-rep.used_tracks = 'A';
+rep.used_tracks = sats;
+rep.weighting_scale_length = 50e3; % m
+rep.track_shift = track_shift;
 %#ok<*UNRCH>
 
+if any(track_shift ~= 0)
+    input('One or more tracks are shifted.')
+end
+
 %% init
-assert(ispc, 'Please run in Linux environment.')
+assert(not(ispc), 'Please run in Linux environment.')
+direc = fullfile('data', 'paper2');
 if not(isempty(suffix))
     if not(strcmp(suffix(1), '_'))
         suffix = ['_', suffix];
     end
 end
+
+if strcmp(background_flow_source, 'superdarn')
+    suffix = ['_SD', suffix];
+elseif strcmp(background_flow_source, 'none')
+    suffix = ['_nobg', suffix];
+end
+
+if not(do_acc)
+    suffix = ['_unacc', suffix];
+end
+
+if Ap_override >= 0 
+    suffix = ['_Apor', suffix];
+end
+
 events = readlines(fullfile(direc, 'event_data.txt'));
 events = events(2:end-1)';
 root_sim = getenv('GEMINI_SIM_ROOT');
 assert(~isempty(root_sim), ...
     'Add environment variable GEMINI_SIM_ROOT directing to gemini simulations')
 
-h5make = @aurogem.tools.h5make;
+h5make = @jules.tools.h5make;
 
 grd.base.alt_min = 80e3;
 grd.base.alt_max = 500e3;
@@ -60,15 +88,23 @@ else
 end
 
 %% main
-for e = events(events_ids)
+for e = events(event_ids)
     tmp = strsplit(e);
     time = datetime(tmp{2}, 'InputFormat', 'uuuu-MM-dd''T''HH:mm:ss''Z');
-    sat = char(tmp{3});
-    fprintf('\n%#30s\n\n', sprintf(pad(' %s ', 80, 'both', '#'), time))
+    % sats = char(tmp{3});
+    fprintf('\n%#30s\n\n', sprintf(pad(' %s %s ', 80, 'both', '#'), time, sats))
     
     rep.contour_values = str2double(strsplit(tmp{11}, ','));
-    rep.flow_background = str2double(strsplit(tmp{12}, ',')) * do_bg_flow;
     rep.boundary_smoothing_window = str2double(tmp{14});
+    if strcmp(background_flow_source, 'pfisr')
+        rep.flow_background = str2double(strsplit(tmp{12}, ','));
+    elseif strcmp(background_flow_source, 'superdarn')
+        rep.flow_background = str2double(strsplit(tmp{15}, ','));
+    elseif strcmp(background_flow_source, 'none')
+        rep.flow_background = [0, 0];
+    else
+        error('background_flow_source not found.')
+    end
     
     time.Format = 'uuuuMMdd';
     sim.x2parms = strrep(tmp{8}, ',', ', ');
@@ -92,7 +128,7 @@ for e = events(events_ids)
 
     % create simulation directories
     direc_sim = fullfile(root_sim, sprintf('swop_%s_%05i_%s_%02i%s', ...
-        time, second(time, 'secondofday'), sat, sim_version, suffix));
+        time, second(time, 'secondofday'), sats, sim_version, suffix));
     direc_ext = fullfile(direc_sim, 'ext');
     direc_data = fullfile(direc_sim, 'ext', 'data');
     if not(exist(direc_data, 'dir'))
@@ -107,16 +143,18 @@ for e = events(events_ids)
         if exist(fullfile(direc_data, f{1}), 'file'); continue; end
         copyfile(fullfile(direc_dasc, f{1}), fullfile(direc_data, f{1}), 'f')
     end
-
-    % copy swarm data
-    direc_swarm = fullfile(direc, 'swarm_data');
-    pattern_efi = fullfile(direc_swarm, sprintf('SW_*EFI%s*%s*.h5', sat, time));
-    pattern_fac = fullfile(direc_swarm, sprintf('SW_*FAC%s*%s*.h5', sat, time));
-    fns_swarm = {dir(pattern_efi).name, dir(pattern_fac).name};
-    for f = fns_swarm
-        if exist(fullfile(direc_data, f{1}), 'file'); continue; end
-        copyfile(fullfile(direc_swarm, f{1}), fullfile(direc_data, f{1}), 'f')
-    end
+    
+    % for sat = sats
+    %     % copy swarm data
+    %     direc_swarm = fullfile(direc, 'swarm_data');
+    %     pattern_efi = fullfile(direc_swarm, sprintf('SW_*EFI%s*%s*.h5', sat, time));
+    %     pattern_fac = fullfile(direc_swarm, sprintf('SW_*FAC%s*%s*.h5', sat, time));
+    %     fns_swarm = {dir(pattern_efi).name, dir(pattern_fac).name};
+    %     for f = fns_swarm
+    %         if exist(fullfile(direc_data, f{1}), 'file'); continue; end
+    %         copyfile(fullfile(direc_swarm, f{1}), fullfile(direc_data, f{1}), 'f')
+    %     end
+    % end
 
     % copy pfisr data
     direc_pfisr = fullfile(direc, 'pfisr_data');
@@ -174,9 +212,18 @@ for e = events(events_ids)
     image.energy(image.energy < 200) = 200; % for ionize_fang:fang2010_spectrum
 
     % save data
+    warning('on', 'jules:h5found')
     prec_fn = fullfile(direc_ext, 'precipitation.h5');
-    h5make(prec_fn, '/Time/Year', year(image.time), 'Year', type='int16')
-    h5make(prec_fn, '/Time/DOY', day(image.time, 'dayofyear'), 'Day of year', type='int16')
+    h5make(prec_fn, '/Time/Year', int16(year(image.time)), 'Year', type='int16')
+    
+    % suppress repetitive warnings
+    [~, warn_id] = lastwarn;
+    if strcmp(warn_id, 'jules:h5found')
+        warning('off', warn_id)
+        fprintf('Supressing further warnings of ID "jules:h5found"\n')
+    end
+
+    h5make(prec_fn, '/Time/DOY', int16(day(image.time, 'dayofyear')), 'Day of year', type='int16')
     h5make(prec_fn, '/Time/Seconds', second(image.time, 'secondofday'), 'Seconds since midnight')
     h5make(prec_fn, '/Time/Unix', posixtime(image.time), 'Unix time')
 
@@ -210,99 +257,113 @@ for e = events(events_ids)
     h5writeatt(prec_fn, '/', 'pos_type', 'linear')
 
     %% prepare tracks.h5
-    for f = fns_swarm
-        if contains(f{1}, 'FAC')
-            fac_fn = fullfile(direc_data, f{1});
-        elseif contains(f{1}, 'EXPT_EFI') && not(contains(f{1}, '_novx'))
-            efi_fn = fullfile(direc_data, f{1});
+    for sat = sats
+        % copy swarm data
+        direc_swarm = fullfile(direc, 'swarm_data');
+        pattern_efi = fullfile(direc_swarm, sprintf('SW_*EFI%s*%s*.h5', sat, time));
+        pattern_fac = fullfile(direc_swarm, sprintf('SW_*FAC%s*%s*.h5', sat, time));
+        fns_swarm = {dir(pattern_efi).name, dir(pattern_fac).name};
+        for f = fns_swarm
+            if exist(fullfile(direc_data, f{1}), 'file'); continue; end
+            copyfile(fullfile(direc_swarm, f{1}), fullfile(direc_data, f{1}), 'f')
         end
-    end
 
-    fac_time = datetime(h5read(fac_fn, '/Timestamp'), 'ConvertFrom', 'posixtime');
-    fac_cad = 1 / seconds(median(diff(fac_time)));
-    [~, fac_id] = min(abs(fac_time - time));
-    fac_ids = fac_id + (-track_window * fac_cad : track_window * fac_cad);
-    fac_glat = h5read(fac_fn, '/GeodeticLatitude');
-    fac_glon = wrapTo360(h5read(fac_fn, '/Longitude'));
-    fac_glat110 = h5read(fac_fn, '/GeodeticLatitude110km');
-    fac_glon110 = wrapTo360(h5read(fac_fn, '/Longitude110km'));
-    fac_mlat = h5read(fac_fn, '/MagneticLatitude');
-    fac_mlon = wrapTo360(h5read(fac_fn, '/MagneticLongitude'));
-    fac_fac = h5read(fac_fn, '/FAC') * 1e-6;
-
-    efi_time = datetime(h5read(efi_fn, '/Timestamp'), 'ConvertFrom', 'posixtime');
-    efi_cad = 1 / seconds(median(diff(efi_time)));
-    [~, efi_id] = min(abs(efi_time - time));
-    efi_ids = efi_id + (-track_window * efi_cad : track_window * efi_cad);
-    efi_gvu = h5read(efi_fn, '/ViU');
-    efi_gve = h5read(efi_fn, '/ViE');
-    efi_gvn = h5read(efi_fn, '/ViN');
-    efi_gv = vecnorm([efi_gvu, efi_gve, efi_gvn]');
-    efi_mvu = h5read(efi_fn, '/ViMagU');
-    efi_mve = h5read(efi_fn, '/ViMagE');
-    efi_mvn = h5read(efi_fn, '/ViMagN');
-    efi_vsatu = -h5read(efi_fn, '/VsatC');
-    efi_vsate = h5read(efi_fn, '/VsatE');
-    efi_vsatn = h5read(efi_fn, '/VsatN');
-    efi_vsat = vecnorm([efi_vsatu; efi_vsate; efi_vsatn]);
-
-    % flow data processing
-    efi_ids(efi_gv(efi_ids) > max_flow) = [];
-    if sum(diff(efi_ids) ~= 1) ~= 0
-        error('Non consecutive data')
-    end
+        for f = fns_swarm
+            if contains(f{1}, 'FAC')
+                fac_fn = fullfile(direc_data, f{1});
+            elseif contains(f{1}, 'EXPT_EFI') && not(contains(f{1}, '_novx'))
+                efi_fn = fullfile(direc_data, f{1});
+            end
+        end
+        [~, fac_fn_tmp] = fileparts(fac_fn);
+        [~, efi_fn_tmp] = fileparts(efi_fn);
     
-    % smooth for minimum scale length
-    fac_w = 2 * min_scale_length / median(efi_vsat(efi_ids) * fac_cad) / 2; % smooth half as much to balance against gradients
-    efi_w = 2 * min_scale_length / median(efi_vsat(efi_ids) * efi_cad);
-    track.times = fac_time;
-    track.glat = fac_glat(fac_ids);
-    track.glon = fac_glon(fac_ids);
-    track.glat110 = fac_glat110(fac_ids);
-    track.glon110 = fac_glon110(fac_ids);
-    track.east = smooth(geod_to_x2(track.glon110, track.glat110));
-    track.north = smooth(geod_to_x3(track.glon110, track.glat110));
-    track.fac = smoothdata(fac_fac(fac_ids), 'gaussian', fac_w);
-    track.gvu = interp1(efi_time(efi_ids), ...
-        smoothdata(efi_gvu(efi_ids), 'gaussian', efi_w), fac_time(fac_ids), 'cubic');
-    track.gve = interp1(efi_time(efi_ids), ...
-        smoothdata(efi_gve(efi_ids), 'gaussian', efi_w), fac_time(fac_ids), 'cubic');
-    track.gvn = interp1(efi_time(efi_ids), ...
-        smoothdata(efi_gvn(efi_ids), 'gaussian', efi_w), fac_time(fac_ids), 'cubic');
-    track.mvu = interp1(efi_time(efi_ids), ...
-        smoothdata(efi_mvu(efi_ids), 'gaussian', efi_w), fac_time(fac_ids), 'cubic');
-    track.mve = interp1(efi_time(efi_ids), ...
-        smoothdata(efi_mve(efi_ids), 'gaussian', efi_w), fac_time(fac_ids), 'cubic');
-    track.mvn = interp1(efi_time(efi_ids), ...
-        smoothdata(efi_mvn(efi_ids), 'gaussian', efi_w), fac_time(fac_ids), 'cubic');
-
-    % save data
-    flow_fn = fullfile(direc_ext, 'tracks.h5');
-    h5make(flow_fn, ['/', sat, '/Time/Year'], year(track.times), 'Year', type='int16')
-    h5make(flow_fn, ['/', sat, '/Time/DOY'], day(track.times, 'dayofyear'), 'Day of year', type='int16')
-    h5make(flow_fn, ['/', sat, '/Time/Seconds'], second(track.times, 'secondofday'), 'Seconds since midnight')
-    h5make(flow_fn, ['/', sat, '/Time/Unix'], posixtime(track.times), 'Unix time')
-     
-    h5make(flow_fn, ['/', sat, '/Coordinates/Magnetic/East'], track.east, 'Magnetic eastward distance' ...
-        , units='Meters')
-    h5make(flow_fn, ['/', sat, '/Coordinates/Magnetic/North'], track.north, 'Magnetic northward distance' ...
-        , units='Meters')
-    h5make(flow_fn, ['/', sat, '/Coordinates/Geodetic/Longitude'], track.glon, 'Geodetic longitude' ...
-        , units='Degrees east (0, 360)')
-    h5make(flow_fn, ['/', sat, '/Coordinates/Geodetic/Latitude'], track.glat, 'Geodetic latitude' ...
-        , units='Degrees north (-90, 90)')
-    h5make(flow_fn, ['/', sat, '/Coordinates/Geodetic/FootLongitude'], track.glat110, 'Footpointed Geodetic longitude' ...
-        , units='Degrees east (0, 360)', foot_alt='110 km')
-    h5make(flow_fn, ['/', sat, '/Coordinates/Geodetic/FootLatitude'], track.glat110, 'Footpointed Geodetic latitude' ...
-        , units='Degrees north (-90, 90)', foot_alt='110 km')
+        fac_time = datetime(h5read(fac_fn, '/Timestamp'), 'ConvertFrom', 'posixtime');
+        fac_cad = 1 / seconds(median(diff(fac_time)));
+        [~, fac_id] = min(abs(fac_time - time));
+        fac_ids = fac_id + (-track_window * fac_cad : track_window * fac_cad);
+        fac_glat = h5read(fac_fn, '/GeodeticLatitude');
+        fac_glon = wrapTo360(h5read(fac_fn, '/Longitude'));
+        fac_glat110 = h5read(fac_fn, '/GeodeticLatitude110km');
+        fac_glon110 = wrapTo360(h5read(fac_fn, '/Longitude110km'));
+        fac_mlat = h5read(fac_fn, '/MagneticLatitude');
+        fac_mlon = wrapTo360(h5read(fac_fn, '/MagneticLongitude'));
+        fac_fac = h5read(fac_fn, '/FAC') * 1e-6;
     
-    h5make(flow_fn, ['/', sat, '/Flow/Magnetic/Up'], track.mvu, 'Magnetic upward plasma flow', units='Meters/second')
-    h5make(flow_fn, ['/', sat, '/Flow/Magnetic/East'], track.mve, 'Magnetic eastward plasma flow', units='Meters/second')
-    h5make(flow_fn, ['/', sat, '/Flow/Magnetic/North'], track.mvn, 'Magnetic northward plasma flow', units='Meters/second')
-    h5make(flow_fn, ['/', sat, '/Flow/Geodetic/Up'], track.gvu, 'Geodetic upward plasma flow', units='Meters/second')
-    h5make(flow_fn, ['/', sat, '/Flow/Geodetic/East'], track.gve, 'Geodetic eastward plasma flow', units='Meters/second')
-    h5make(flow_fn, ['/', sat, '/Flow/Geodetic/North'], track.gvn, 'Geodetic northward plasma flow', units='Meters/second')
-    h5make(flow_fn, ['/', sat, '/Current/FieldAligned'], track.fac, 'Field aligned current', units='Amperes/meter^2')
+        efi_time = datetime(h5read(efi_fn, '/Timestamp'), 'ConvertFrom', 'posixtime');
+        efi_cad = 1 / seconds(median(diff(efi_time)));
+        [~, efi_id] = min(abs(efi_time - time));
+        efi_ids = efi_id + (-track_window * efi_cad : track_window * efi_cad);
+        efi_gvu = h5read(efi_fn, '/ViU');
+        efi_gve = h5read(efi_fn, '/ViE');
+        efi_gvn = h5read(efi_fn, '/ViN');
+        efi_gv = vecnorm([efi_gvu, efi_gve, efi_gvn]');
+        efi_mvu = h5read(efi_fn, '/ViMagU');
+        efi_mve = h5read(efi_fn, '/ViMagE');
+        efi_mvn = h5read(efi_fn, '/ViMagN');
+        efi_vsatu = -h5read(efi_fn, '/VsatC');
+        efi_vsate = h5read(efi_fn, '/VsatE');
+        efi_vsatn = h5read(efi_fn, '/VsatN');
+        efi_vsat = vecnorm([efi_vsatu; efi_vsate; efi_vsatn]);
+    
+        % flow data processing
+        efi_ids(efi_gv(efi_ids) > max_flow) = [];
+        if check_consecutive_efi && (sum(diff(efi_ids) ~= 1) ~= 0)
+            error('Non consecutive data')
+        end
+        
+        % smooth for minimum scale length
+        fac_w = 2 * min_scale_length / median(efi_vsat(efi_ids) * fac_cad) / 2; % smooth half as much to balance against gradients
+        efi_w = 2 * min_scale_length / median(efi_vsat(efi_ids) * efi_cad);
+        track.times = fac_time;
+        track.glat = fac_glat(fac_ids);
+        track.glon = fac_glon(fac_ids);
+        track.glat110 = fac_glat110(fac_ids);
+        track.glon110 = fac_glon110(fac_ids);
+        track.east = smooth(geod_to_x2(track.glon110, track.glat110));
+        track.north = smooth(geod_to_x3(track.glon110, track.glat110));
+        track.fac = smoothdata(fac_fac(fac_ids), 'gaussian', fac_w);
+        track.gvu = interp1(efi_time(efi_ids), ...
+            smoothdata(efi_gvu(efi_ids), 'gaussian', efi_w), fac_time(fac_ids), 'spline');
+        track.gve = interp1(efi_time(efi_ids), ...
+            smoothdata(efi_gve(efi_ids), 'gaussian', efi_w), fac_time(fac_ids), 'spline');
+        track.gvn = interp1(efi_time(efi_ids), ...
+            smoothdata(efi_gvn(efi_ids), 'gaussian', efi_w), fac_time(fac_ids), 'spline');
+        track.mvu = interp1(efi_time(efi_ids), ...
+            smoothdata(efi_mvu(efi_ids), 'gaussian', efi_w), fac_time(fac_ids), 'spline');
+        track.mve = interp1(efi_time(efi_ids), ...
+            smoothdata(efi_mve(efi_ids), 'gaussian', efi_w), fac_time(fac_ids), 'spline');
+        track.mvn = interp1(efi_time(efi_ids), ...
+            smoothdata(efi_mvn(efi_ids), 'gaussian', efi_w), fac_time(fac_ids), 'spline');
+    
+        % save data
+        flow_fn = fullfile(direc_ext, 'tracks.h5');
+        h5make(flow_fn, ['/', sat, '/Time/Year'], int16(year(track.times)), 'Year', type='int16')
+        h5make(flow_fn, ['/', sat, '/Time/DOY'], int16(day(track.times, 'dayofyear')), 'Day of year', type='int16')
+        h5make(flow_fn, ['/', sat, '/Time/Seconds'], second(track.times, 'secondofday'), 'Seconds since midnight')
+        h5make(flow_fn, ['/', sat, '/Time/Unix'], posixtime(track.times), 'Unix time')
+         
+        h5make(flow_fn, ['/', sat, '/Coordinates/Magnetic/East'], track.east, 'Magnetic eastward distance' ...
+            , units='Meters')
+        h5make(flow_fn, ['/', sat, '/Coordinates/Magnetic/North'], track.north, 'Magnetic northward distance' ...
+            , units='Meters')
+        h5make(flow_fn, ['/', sat, '/Coordinates/Geodetic/Longitude'], track.glon, 'Geodetic longitude' ...
+            , units='Degrees east (0, 360)')
+        h5make(flow_fn, ['/', sat, '/Coordinates/Geodetic/Latitude'], track.glat, 'Geodetic latitude' ...
+            , units='Degrees north (-90, 90)')
+        h5make(flow_fn, ['/', sat, '/Coordinates/Geodetic/FootLongitude'], track.glat110, 'Footpointed Geodetic longitude' ...
+            , units='Degrees east (0, 360)', foot_alt='110 km')
+        h5make(flow_fn, ['/', sat, '/Coordinates/Geodetic/FootLatitude'], track.glat110, 'Footpointed Geodetic latitude' ...
+            , units='Degrees north (-90, 90)', foot_alt='110 km')
+        
+        h5make(flow_fn, ['/', sat, '/Flow/Magnetic/Up'], track.mvu, 'Magnetic upward plasma flow', units='Meters/second')
+        h5make(flow_fn, ['/', sat, '/Flow/Magnetic/East'], track.mve, 'Magnetic eastward plasma flow', units='Meters/second')
+        h5make(flow_fn, ['/', sat, '/Flow/Magnetic/North'], track.mvn, 'Magnetic northward plasma flow', units='Meters/second')
+        h5make(flow_fn, ['/', sat, '/Flow/Geodetic/Up'], track.gvu, 'Geodetic upward plasma flow', units='Meters/second')
+        h5make(flow_fn, ['/', sat, '/Flow/Geodetic/East'], track.gve, 'Geodetic eastward plasma flow', units='Meters/second')
+        h5make(flow_fn, ['/', sat, '/Flow/Geodetic/North'], track.gvn, 'Geodetic northward plasma flow', units='Meters/second')
+        h5make(flow_fn, ['/', sat, '/Current/FieldAligned'], track.fac, 'Field aligned current', units='Amperes/meter^2')
+    end
 
     h5writeatt(flow_fn, '/', 'pos_type', 'linear')
 
@@ -312,7 +373,10 @@ for e = events(events_ids)
     fid0 = fopen(cfg_main, 'w');
     fid1 = fopen(cfg_rep, 'w');
     time.Format = 'uuuu,M,d';
-    [f107, ~, f107a, Ap] = aurogem.tools.activity(time);
+    [f107, ~, f107a, Ap] = jules.tools.activity(time);
+    if Ap_override >= 0
+        Ap = Ap_override;
+    end
     
     for fid = [fid0, fid1]
         fprintf(fid, '&base\n');
@@ -404,11 +468,13 @@ for e = events(events_ids)
             fprintf(fid, sprintf('fit_harmonic_function = %i\n', rep.fit_harmonic_function));
             fprintf(fid, sprintf('replication_number = %i\n', rep.replication_number));
             fprintf(fid, sprintf("arc_definition = '%s'\n", rep.arc_definition));
-            fprintf(fid, sprintf('contour_values = %i,%i\n', rep.contour_values(1), rep.contour_values(2)));
+            fprintf(fid, sprintf('contour_values = %.1f,%.1f\n', rep.contour_values(1), rep.contour_values(2)));
             fprintf(fid, sprintf('harmonic_mask = %.0fe3,%.0fe3,%.0fe3\n', ...
                 rep.harmonic_mask(1) / 1e3, rep.harmonic_mask(2) / 1e3, rep.harmonic_mask(3) / 1e3));
             fprintf(fid, sprintf("used_tracks = '%s'\n", rep.used_tracks));
             fprintf(fid, sprintf('flow_background = %.0f,%.0f\n', rep.flow_background(1), rep.flow_background(2)));
+            fprintf(fid, sprintf('weighting_scale_length = %.0fe3\n', rep.weighting_scale_length / 1e3));
+            fprintf(fid, sprintf('track_shift = %.2f,%.2f\n', rep.track_shift(1), rep.track_shift(2)));
             fprintf(fid, '/\n');
         end
     end

@@ -1,3 +1,6 @@
 data/init/
+data/swop/
 .DS_Store
 *.asv
+*.db
+

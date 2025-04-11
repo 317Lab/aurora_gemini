@@ -70,7 +70,6 @@ for sat = sats
     tmp.flow(:, 2) = h5read(file_track, ['/', sat, '/Flow/Magnetic/North']);
     tmp.fac(:, 1) = h5read(file_track, ['/', sat, '/Current/FieldAligned']);
     tmp.pos_type = tracks_pos_type;
-    fprintf('Median eastward flow is %.3f m/s\n', nanmedian(tmp.flow(:, 1))) %#ok<NANMEDIAN>
     tracks.(sat) = tmp;
     clear('tmp')
 end

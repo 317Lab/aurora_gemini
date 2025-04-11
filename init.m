@@ -16,19 +16,21 @@ end
 
 for env = envs
     filename = fullfile('data', 'init', env(1));
-    if not(isempty(getenv(env(1))))
-        warning('Overwriting MATLAB environment variable %s with contents of %s', ...
-            env(1), filename)
-    end
     fid = fopen(filename, 'r');
     if fid ~= -1
         env_path = fgetl(fid);
+        if ispc
+            env_path = strrep(env_path, '/', '\');
+        else
+            env_path = strrep(env_path, '\', '/');
+        end
     else
         fclose all;
         while true
             env_path = input(sprintf('Please enter root path to the %s:\n %s = ' ...
                 , env(2), env(1)), 's');
-            env_path = [filesep, fullfile(env_path)];
+            
+            env_path = fullfile(env_path);
             if isfolder(env_path)
                 break
             else
@@ -39,9 +41,10 @@ for env = envs
         fprintf(fid, '%s', env_path);
         fclose(fid);
     end
+    env_path = fullfile(filesep, env_path);
     fprintf(' %s = %s\n', env(1), env_path)
     setenv(env(1), env_path)
-    addpath(fullfile(env_path))
+    addpath(env_path)
 end
 
 fclose all;

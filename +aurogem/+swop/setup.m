@@ -13,8 +13,9 @@
 % Revisions:
 %   04/10/2025  initial implementation (jvi)
 %
-function setup(event_id, swarm_ids, opts)
+function setup(data_direc, event_id, swarm_ids, opts)
 arguments
+    data_direc (1, :) char {mustBeFolder}
     event_id (1, 1) int32 {mustBeNonnegative}
     swarm_ids (1, :) char {mustBeNonempty}
     opts.sim_version (1, 1) int32 {mustBeNonnegative} = 9
@@ -67,7 +68,7 @@ grd.base.lyp = 400;
 
 %% init
 assert(not(ispc), 'Please run in Linux environment.')
-direc = fullfile(getenv('AUROGEM_ROOT'), 'data', 'swop');
+% data_direc = fullfile(getenv('AUROGEM_ROOT'), 'data', 'swop');
 root_sim = getenv('GEMINI_SIM_ROOT');
 assert(~isempty(root_sim), ...
     'Add environment variable GEMINI_SIM_ROOT directing to gemini simulations')
@@ -101,7 +102,7 @@ if opts.Ap_override >= 0
     suffix = ['_Apor', suffix];
 end
 
-events = readlines(fullfile(direc, 'event_data.txt'));
+events = readlines(fullfile(data_direc, 'event_data.txt'));
 event_titles = strsplit(events(1));
 for e = events(1:end-1)'
     tmp = strsplit(e);
@@ -165,7 +166,7 @@ end
 
 % copy dasc data
 fprintf('Copying DASC data files ...\n')
-direc_dasc = fullfile(direc, 'dasc');
+direc_dasc = fullfile(data_direc, 'dasc');
 pattern_dasc = fullfile(direc_dasc, sprintf('INV_PKR_%s_%05i*.h5', ...
     time, second(time, 'secondofday')));
 fns_dasc = {dir(pattern_dasc).name};
@@ -176,7 +177,7 @@ end
 
 % copy pfisr data
 fprintf('Copying PFISR data files ...\n')
-direc_pfisr = fullfile(direc, 'pfisr');
+direc_pfisr = fullfile(data_direc, 'pfisr');
 pattern_vvels = fullfile(direc_pfisr, sprintf('%s*vvels_lat.h5', time));
 fns_pfisr = {dir(pattern_vvels).name};
 for f = fns_pfisr
@@ -281,7 +282,7 @@ h5writeatt(prec_fn, '/', 'pos_type', 'linear')
 fprintf('Copying Swarm data ...\n')
 for sat = swarm_ids
     % copy swarm data
-    direc_swarm = fullfile(direc, 'swarm');
+    direc_swarm = fullfile(data_direc, 'swarm');
     pattern_efi = fullfile(direc_swarm, sprintf('SW_*EFI%s*%s*.h5', sat, time));
     pattern_fac = fullfile(direc_swarm, sprintf('SW_*FAC%s*%s*.h5', sat, time));
     fns_swarm = {dir(pattern_efi).name, dir(pattern_fac).name};

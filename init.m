@@ -29,7 +29,6 @@ for env = envs
         while true
             env_path = input(sprintf('Please enter root path to the %s:\n %s = ' ...
                 , env(2), env(1)), 's');
-            
             env_path = fullfile(env_path);
             if isfolder(env_path)
                 break
@@ -46,6 +45,20 @@ for env = envs
     setenv(env(1), env_path)
     addpath(env_path)
 end
+
+filename = fullfile('data', 'init', 'EDITOR');
+fid = fopen(filename, 'r');
+if fid ~= -1
+    env = fgetl(fid);
+else
+    fclose all;
+    env = input('Please enter the text editor you want MATLAB to use:\n EDITOR = ', 's');
+    fid = fopen(filename, 'w');
+    fprintf(fid, '%s', env);
+    fclose(fid);
+end
+fprintf(' EDITOR = %s\n', env)
+setenv('EDITOR', env)
 
 fclose all;
 clear('envs', 'env', 'env_path', 'filename', 'fid', 'ans');

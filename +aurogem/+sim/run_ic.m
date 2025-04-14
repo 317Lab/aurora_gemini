@@ -52,7 +52,7 @@ cfg = gemini3d.read.config(direc);
 [~, fn_ic] = fileparts(cfg.eq_dir);
 direc_ic = fullfile(sim_root, 'ics', fn_ic);
 if exist(direc_ic, 'dir')
-    cfg_ic = gemini3d.read.cfg(direc_ic);
+    cfg_ic = gemini3d.read.config(direc_ic);
     ic_h5 = fullfile(direc_ic, gemini3d.datelab(cfg_ic.times(end)) + '.h5');
     if exist(ic_h5, 'file')
         fprintf('Initial condition exists: %s\n', direc_ic)

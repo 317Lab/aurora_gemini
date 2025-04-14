@@ -159,8 +159,8 @@ h5make = @aurogem.tools.h5make;
 
 answered = false;
 while not(answered)
-    answer = input('Save boundary condition? (Y/n) ', 's');
-    if strcmp(answer, 'Y')
+    answer = input('Save boundary condition? (y/n) ', 's');
+    if strcmp(answer, 'y')
         answered = true;
         happy = true;
     elseif strcmp(answer, 'n')

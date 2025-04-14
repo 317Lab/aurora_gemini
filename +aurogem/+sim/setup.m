@@ -40,7 +40,7 @@ assert(~isempty(mat_root), ...
 addpath(mat_root)
 
 % run initial condition and setup
-aurogem.sim.run_ic(direc)
+aurogem.sim.run_ic(direc);
 gemini3d.model.setup(direc, direc)
 
 % check if input fields on gemini grid

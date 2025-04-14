@@ -510,7 +510,7 @@ aurogem.sim.replication(direc_sim)
 
 %% gemini setup
 while true
-    run_setup = input('Run GEMINI setup (y/n)? ', 's');
+    run_setup = input('Run GEMINI setup? (y/n) ', 's');
     if strcmp(run_setup, 'y')
         nas_username = input('NAS Agency User ID: ', 's');
         nas_group = input('NAS Group ID (GID): ', 's');

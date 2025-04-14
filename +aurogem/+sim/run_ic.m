@@ -52,8 +52,12 @@ cfg = gemini3d.read.config(direc);
 [~, fn_ic] = fileparts(cfg.eq_dir);
 direc_ic = fullfile(sim_root, 'ics', fn_ic);
 if exist(direc_ic, 'dir')
-    fprintf('Initial condition exists: %s\n', direc_ic)
-    return
+    cfg_ic = gemini3d.read.cfg(direc_ic);
+    ic_h5 = fullfile(direc_ic, gemini3d.datelab(cfg_ic.times(end)) + '.h5');
+    if exist(ic_h5, 'file')
+        fprintf('Initial condition exists: %s\n', direc_ic)
+        return
+    end
 else
     mkdir(direc_ic)
 end
@@ -120,10 +124,23 @@ if opts.do_setup
     gemini3d.model.setup(direc_ic, direc_ic)
 end
 
+status = 0;
 if opts.do_run
     gemini_bin = fullfile(gem_root, 'build', 'gemini.bin');
     command = sprintf('mpiexec -np %i %s %s', opts.np, gemini_bin, direc_ic);
-    system(command, '-echo')
+    status = system(command, '-echo');
+    if status ~= 0
+        warning('IC simulation failed.')
+        fprintf('Please run the following command from a GEMINI simulation compatible environment:\n\n  %s\n\n', command)
+        while true
+            ic_has_run = input('Has IC simulation finished? (y/n) ', 's');
+            if strcmp(ic_has_run, 'y')
+                return
+            elseif strcmp(ic_has_run, 'n')
+                fprintf('Please wait until IC simulation has finished.\n')
+            end
+        end
+    end
 end
 
 end

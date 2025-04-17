@@ -16,7 +16,7 @@
 % simulations directories
 direc_root = fullfile('..', 'public_html', 'Gemini3D');
 % direc = fullfile(direc_root, 'swop_20230210_35487_AC_09_SD');
-direc = fullfile(direc_root, 'swop_20230210_35487_AC_09');
+direc = fullfile(direc_root, 'swop_20230210_35487_AC_09_SD');
 % direc = fullfile(direc_root, 'swop_20230210_35487_AC_09_unacc_SD');
 % direc = fullfile(direc_root, 'swop_20230210_35487_A_09_nobg');
 direc_compare = ''; % when comparing tubes of two simulations

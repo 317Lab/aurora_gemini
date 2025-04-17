@@ -81,6 +81,18 @@ if not(isempty(suffix))
     end
 end
 
+if opts.Ap_override >= 0
+    suffix = ['_Apor', suffix];
+end
+
+suffix = ['_', pad(swarm_ids, 2, 'left', 'x'), suffix];
+
+if opts.do_acc
+    suffix = ['_AM', suffix];
+else
+    suffix = ['_UM', suffix];
+end
+
 bfs = opts.background_flow_source;
 if strcmp(bfs, 'superdarn')
     suffix = ['_SD', suffix];
@@ -90,16 +102,6 @@ elseif strcmp(bfs, 'none')
     suffix = ['_NB', suffix];
 else
     error('background_flow_source not found.')
-end
-
-if opts.do_acc
-    suffix = ['_AM', suffix];
-else
-    suffix = ['_UM', suffix];
-end
-
-if opts.Ap_override >= 0
-    suffix = ['_Apor', suffix];
 end
 
 events = readlines(fullfile(data_direc, 'event_data.txt'));
@@ -156,8 +158,8 @@ geod_to_x2 = scatteredInterpolant(xg.GLON(:), xg.GLAT(:), X2(:), 'natural');
 geod_to_x3 = scatteredInterpolant(xg.GLON(:), xg.GLAT(:), X3(:), 'natural');
 
 % create simulation directories
-direc_sim = fullfile(root_sim, sprintf('swop_%s_%05i_%s_%02i%s', ...
-    time, second(time, 'secondofday'), swarm_ids, opts.sim_version, suffix));
+direc_sim = fullfile(root_sim, sprintf('swop_%s_%05i_%02i%s', ...
+    time, second(time, 'secondofday'), opts.sim_version, suffix));
 direc_ext = fullfile(direc_sim, 'ext');
 direc_data = fullfile(direc_sim, 'ext', 'data');
 if not(exist(direc_data, 'dir'))

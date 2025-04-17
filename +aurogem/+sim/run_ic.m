@@ -43,6 +43,10 @@ assert(~isempty(mat_root), ...
 assert(~isempty(sim_root), ...
     'Add environment variable GEMINI_SIM_ROOT directing to gemini simulations')
 
+if ~exist(fullfile(sim_root, 'ics'), 'dir')
+    mkdir(fullfile(sim_root, 'ics'))
+end
+
 % setup for gemini matlab tools
 addpath(mat_root)
 setup

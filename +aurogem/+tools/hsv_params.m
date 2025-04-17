@@ -46,7 +46,6 @@
 %
 % Dependencies:
 %   matlab R2020a or higher
-%   gemscr
 %
 % Contact:
 %   jules.van.irsel.gr@dartmouth.edu

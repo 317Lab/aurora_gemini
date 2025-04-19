@@ -31,6 +31,7 @@ arguments
 end
 
 %% init
+status = 0;
 gem_root = getenv('GEMINI_ROOT');
 mat_root = getenv('GEMINI_MAT_ROOT');
 sim_root = getenv('GEMINI_SIM_ROOT');
@@ -128,7 +129,6 @@ if opts.do_setup
     gemini3d.model.setup(direc_ic, direc_ic)
 end
 
-status = 0;
 if opts.do_run
     gemini_bin = fullfile(gem_root, 'build', 'gemini.bin');
     command = sprintf('mpiexec -np %i %s %s', opts.np, gemini_bin, direc_ic);

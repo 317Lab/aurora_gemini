@@ -136,15 +136,6 @@ if opts.do_run
     if status ~= 0
         warning('IC simulation failed.')
         fprintf('Please run the following command from a GEMINI simulation compatible environment:\n\n  %s\n\n', command)
-        return
-        % while true
-        %     ic_has_run = input('Has IC simulation finished? (y/n) ', 's');
-        %     if strcmp(ic_has_run, 'y')
-        %         return
-        %     elseif strcmp(ic_has_run, 'n')
-        %         fprintf('Please wait until IC simulation has finished.\n')
-        %     end
-        % end
     end
 end
 

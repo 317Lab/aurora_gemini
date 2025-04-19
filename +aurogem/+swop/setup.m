@@ -506,6 +506,10 @@ end
 
 fclose all;
 
+%% run initial condition
+status = aurogem.sim.run_ic(direc_sim);
+if status ~= 0; return; end
+
 %% perform replication
 fprintf('Performing replication ...\n')
 aurogem.sim.replication(direc_sim)

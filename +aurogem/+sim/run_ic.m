@@ -20,7 +20,7 @@
 %   07/23/2024  initial implementation (jvi)
 %
 
-function run_ic(direc, opts)
+function status = run_ic(direc, opts)
 arguments
     direc (1, :) char {mustBeFolder}
     opts.lxp (1, 1) int32 {mustBePositive} = 24
@@ -128,6 +128,7 @@ if opts.do_setup
     gemini3d.model.setup(direc_ic, direc_ic)
 end
 
+status = 0;
 if opts.do_run
     gemini_bin = fullfile(gem_root, 'build', 'gemini.bin');
     command = sprintf('mpiexec -np %i %s %s', opts.np, gemini_bin, direc_ic);
@@ -135,14 +136,15 @@ if opts.do_run
     if status ~= 0
         warning('IC simulation failed.')
         fprintf('Please run the following command from a GEMINI simulation compatible environment:\n\n  %s\n\n', command)
-        while true
-            ic_has_run = input('Has IC simulation finished? (y/n) ', 's');
-            if strcmp(ic_has_run, 'y')
-                return
-            elseif strcmp(ic_has_run, 'n')
-                fprintf('Please wait until IC simulation has finished.\n')
-            end
-        end
+        return
+        % while true
+        %     ic_has_run = input('Has IC simulation finished? (y/n) ', 's');
+        %     if strcmp(ic_has_run, 'y')
+        %         return
+        %     elseif strcmp(ic_has_run, 'n')
+        %         fprintf('Please wait until IC simulation has finished.\n')
+        %     end
+        % end
     end
 end
 

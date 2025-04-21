@@ -14,11 +14,13 @@
 %#ok<*UNRCH>
 
 % simulations directories
-direc_root = fullfile('..', 'public_html', 'Gemini3D');
+direc_root = getenv('GEMINI_SIM_ROOT');
 % direc = fullfile(direc_root, 'swop_20230210_35487_AC_09_SD');
-direc = fullfile(direc_root, 'swop_20230210_35487_AC_09_SD');
+% direc = fullfile(direc_root, 'swop_20230210_35487_AC_09_SD');
 % direc = fullfile(direc_root, 'swop_20230210_35487_AC_09_unacc_SD');
 % direc = fullfile(direc_root, 'swop_20230210_35487_A_09_nobg');
+sim = 'swop_20230304_27012_09_SD_AM_xC';
+direc = fullfile(direc_root, sim);
 direc_compare = ''; % when comparing tubes of two simulations
 
 % plotting parameters
@@ -124,7 +126,7 @@ tube_pars = tube_pars_tmp;
 
 %% load simulation structures
 sats = strsplit(direc, '_');
-sats = sats{5};
+sats = strrep(sats{8}, 'x', '');
 
 cfg = gemini3d.read.config(direc);
 if not(exist('xg', 'var')) || reload_grid
@@ -145,7 +147,6 @@ fprintf('Simulation data loaded.\n')
 
 scl.x = 1e-3;  unt.x = 'km';
 scl.e = 1e3;   unt.e = 'mV/m';
-scl.qe = 2;
 scl.f = 1e-3;  unt.f = 'kA';
 scl.n = 1e0;   unt.n = 'm^{-3}'; clm.n = 'L9';
 scl.j = 1e6;   unt.j = 'uA/m^2'; clm.j = 'D1A';

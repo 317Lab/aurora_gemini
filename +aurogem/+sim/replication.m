@@ -58,8 +58,6 @@ end
 
 for sat = sats
     if strcmp(tracks_pos_type , 'linear')
-        disp(file_track)
-        disp(['/', sat, '/Coordinates/Magnetic/East'])
         tmp.pos(:, 1) = h5read(file_track, ['/', sat, '/Coordinates/Magnetic/East']);
         tmp.pos(:, 2) = h5read(file_track, ['/', sat, '/Coordinates/Magnetic/North']);
     elseif strcmp(tracks_pos_type , 'angular')

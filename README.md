@@ -1,14 +1,20 @@
 # Aurora Gemini
 Boundary driver development and postprocessing tools for Gemini3D simulations of auroral arc systems.
 
+## Requirements
+Please ensure your environment has the following:
+- MATLAB $\geq$ r2024a
+- GEMINI requirements found here:\
+https://github.com/317Lab/gemini3d/blob/main/Readme.md
+
 ## Quick BASH Install
 Run the following:
 ```sh
-bash install_aurogem.sh
+git clone https://github.com/317Lab/aurora_gemini.git; bash aurora_gemini/install.sh
 ```
 
 ## Manual Install
-From the directory `aurora_gemini/..` run the following:
+From the directory `aurora_gemini/..`, run the following:
 ```sh
 mkdir sims
 git clone https://github.com/317Lab/gemini3d.git
@@ -24,6 +30,7 @@ cmake --build build --parallel
 ctest --test-dir build
 cd ..
 ```
+It is recommended to us the `sims` directory for your simulations. Forks from github.com/gemini3d are use to allow GEMINI to output conductivity volumes and for other, minor adjustments, e.g. reading additional configuration namelists. Forks will be updated semi-regularly.
 
 ## Related Publications:
 van Irsel, J., Lynch, K., Mule, A., Zettergren, M., (2024), Generation of top boundary conditions for 3D ionospheric models constrained by auroral imagery and plasma flow data, _Journal of Geophysical Research: Space Physics_.\

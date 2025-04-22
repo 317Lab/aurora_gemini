@@ -1,4 +1,4 @@
-data/init/*
+data/init/
 data/swop/
 .DS_Store
 *.asv

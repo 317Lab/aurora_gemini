@@ -29,7 +29,7 @@ if do_default
         setenv(env(1), env_path)
         addpath(env_path)
     end
-    fprintf(' EDITOR = %s\n', env)
+    fprintf(' EDITOR = vi\n')
     setenv('EDITOR', 'vi')
     return
 end

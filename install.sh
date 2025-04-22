@@ -1,16 +1,17 @@
 #~/bin/bash
 
-read -e -p "Install location: " install_direc
-install_direc="${install_direc/#\~/$HOME}"
-install_direc="$(realpath "$install_direc" 2>/dev/null)"
+#read -e -p "Install location: " install_direc
+#install_direc="${install_direc/#\~/$HOME}"
+#install_direc="$(realpath "$install_direc" 2>/dev/null)"
 
-if [ -d "$install_direc" ]; then
-	cd "$install_direc"
-else
-	echo "Directory does not exist: $install_direc" >&2
-	exit 1
-fi
+#if [ -d "$install_direc" ]; then
+#	cd "$install_direc"
+#else
+#	echo "Directory does not exist: $install_direc" >&2
+#	exit 1
+#fi
 
+cd ..
 mkdir sims
 git clone https://github.com/317Lab/gemini3d.git
 git clone https://github.com/317Lab/mat_gemini.git

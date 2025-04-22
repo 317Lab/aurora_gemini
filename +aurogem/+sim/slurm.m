@@ -23,6 +23,7 @@ arguments
     opts.num_cpus_per_node (1, 1) int32 {mustBePositive} = 64
     opts.num_nodes (1, 1) int32 {mustBePositive} = 1
     opts.max_hours (1, 1) double {mustBePositive} = 5
+    opts.account (1, :) char = ''
 end
 
 %% init
@@ -107,6 +108,7 @@ fprintf(fid, '\n# Command options:\n');
 fprintf(fid, '%s -J %s\n', batch_cmd, sim_name);
 fprintf(fid, '%s -o %s%s%%j.log\n', batch_cmd, direc, filesep);
 fprintf(fid, '%s -e %s%s%%j.err\n', batch_cmd, direc, filesep);
+fprintf(fid, '%s -A %s\n', batch_cmd, opts.account);
 fprintf(fid, '%s --mail-type=END,FAIL\n', batch_cmd);
 fprintf(fid, '%s --time=%i\n', batch_cmd, opts.max_hours*60);
 fprintf(fid, '%s --nodes=%i\n', batch_cmd, n_nodes);

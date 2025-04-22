@@ -520,8 +520,10 @@ while true
     if strcmp(run_setup, 'y')
         nas_username = input('NAS Agency User ID: ', 's');
         nas_group = input('NAS Group ID (GID): ', 's');
+        slurm_account = input('sbatch account: ', 's');
         fprintf('Performing GEMINI setup ...\n')
-        aurogem.sim.setup(direc_sim, nas_username, 'both', group_list=nas_group)
+        aurogem.sim.setup(direc_sim, nas_username, 'both', ...
+            group_list=nas_group, slurm_account=slurm_account)
         break
     elseif strcmpi(run_setup, 'n')
         break

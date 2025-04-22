@@ -23,6 +23,7 @@ arguments
     username (1, :) char {mustBeNonempty}
     hpc (1, 1) string {mustBeMember(hpc, ["hec", "discovery", "both"])}
     opts.group_list (1, :) char = ''
+    opts.slurm_account (1, :) char = ''
 end
 
 potential_fn = fullfile(direc, 'ext', 'potential.h5');
@@ -127,7 +128,7 @@ exportgraphics(gcf, fullfile(direc, 'inputs', 'summary.png'), 'Resolution', 600)
 if strcmp(hpc, "hec")
     aurogem.sim.pbs(direc, username, group_list = opts.group_list)
 elseif strcmp(hpc, "discovery")
-    aurogem.sim.slurm(direc)
+    aurogem.sim.slurm(direc, account=opts.slurm_account)
 elseif strcmp(hpc, "both")
     aurogem.sim.pbs(direc, username, group_list = opts.group_list)
     aurogem.sim.slurm(direc)

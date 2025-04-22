@@ -25,9 +25,11 @@ if do_default
     for env = envs
         filename = fullfile('data', 'init', env(1));
         env_path = fullfile(fileparts(pwd), env(3));
+        fprintf(' %s = %s\n', env(1), env_path)
         setenv(env(1), env_path)
         addpath(env_path)
     end
+    fprintf(' EDITOR = %s\n', env)
     setenv('EDITOR', 'vi')
     return
 end
@@ -83,4 +85,4 @@ fprintf(' EDITOR = %s\n', env)
 setenv('EDITOR', env)
 
 fclose all;
-clear('envs', 'env', 'env_path', 'filename', 'fid', 'ans');
+clear('do_default', 'envs', 'env', 'env_path', 'filename', 'fid', 'ans');

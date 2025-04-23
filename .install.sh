@@ -1,4 +1,4 @@
-#~/bin/bash
+#!/bin/bash
 
 #read -e -p "Install location: " install_direc
 #install_direc="${install_direc/#\~/$HOME}"

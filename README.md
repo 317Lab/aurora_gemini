@@ -12,7 +12,7 @@ For HPC environments, avoid using hdf5 modules as they tend to interfere with hd
 ## Quick BASH Install
 Run the following:
 ```sh
-git clone https://github.com/317Lab/aurora_gemini.git; bash aurora_gemini/.install.sh
+git clone https://github.com/317Lab/aurora_gemini.git; bash aurora_gemini/install.sh
 ```
 Ensure that ctest outputs '100% tests passed'.
 

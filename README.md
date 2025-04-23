@@ -5,7 +5,7 @@ Boundary driver development and postprocessing tools for Gemini3D simulations of
 Please ensure your environment has the following:
 - MATLAB $\geq$ r2024a
 - GEMINI requirements found here:\
-https://github.com/317Lab/gemini3d/blob/main/Readme.md
+https://github.com/317Lab/gemini3d/blob/main/Readme.md\
 For HPC environments, avoid using hdf5 modules as they tend to interfere with hdf5 tools installed by the gemini3d build.
 
 ## Quick BASH Install
@@ -33,7 +33,7 @@ ctest --test-dir build
 cd ..
 
 ```
-It is recommended to us the `sims` directory for your simulations. Forks from github.com/gemini3d are use to allow GEMINI to output conductivity volumes and for other, minor adjustments, e.g. reading additional configuration namelists. Forks will be updated semi-regularly.
+It is recommended to us the `sims` directory for your simulations. Forks from github.com/gemini3d are used to allow GEMINI to output conductivity volumes and for other, minor adjustments, e.g. reading additional configuration namelists. Forks will be updated semi-regularly.
 
 ## Sample Simulation
 Inside `data/sample` is an example set of data required for a simulation of a Swarm-over-Poker event. To setup the sample simulation, start within MATLAB in aurora_gemini and run

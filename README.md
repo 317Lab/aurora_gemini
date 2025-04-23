@@ -5,7 +5,8 @@ Boundary driver development and postprocessing tools for Gemini3D simulations of
 Please ensure your environment has the following:
 - MATLAB $\geq$ r2024a
 - GEMINI requirements found here:\
-https://github.com/317Lab/gemini3d/blob/main/Readme.md\
+https://github.com/317Lab/gemini3d/blob/main/Readme.md
+<a/>
 For HPC environments, avoid using hdf5 modules as they tend to interfere with hdf5 tools installed by the gemini3d build.
 
 ## Quick BASH Install

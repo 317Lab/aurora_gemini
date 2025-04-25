@@ -51,7 +51,17 @@ mlat_to_x3 = griddedInterpolant(mlat, x3);
 direc_part = fullfile(fileparts(cfg.nml), 'ext', 'precipitation.h5');
 Q_part = h5read(direc_part, '/Derived/Energy/Flux');
 E0_part = h5read(direc_part, '/Derived/Energy/Characteristic');
+if any(isnan(Q_part(:)))
+    warning('Filling NaN(s) in %s: /Derived/Energy/Flux', direc_part)
+    Q_part = fillmissing2(Q_part, 'cubic');
+end
+if any(isnan(E0_part(:)))
+    warning('Filling NaN(s) in %s: /Derived/Energy/Characteristic', direc_part)
+    E0_part = fillmissing2(E0_part, 'cubic');
+end
+
 if cfg.flagdirich == 1
+    warning('NaN(s) in E0_part')
     mlon_part = h5read(direc_part, '/Coordinates/Magnetic/Longitude');
     mlat_part = h5read(direc_part, '/Coordinates/Magnetic/Latitude');
     x2_part = mlon_to_x2(mlon_part);
@@ -102,6 +112,11 @@ clear('xg_rep')
 fprintf('Interpolating potential onto simulation grid.')
 fbc = griddedInterpolant(X2_rep, X3_rep, bc, 'spline');
 bc = fbc(X2, X3);
+
+if any(isnan(bc(:)))
+    warning('Filling NaN(s) in field driver')
+    bc = fillmissing2(bc, 'cubic');
+end
 
 Vmaxx1it = repmat(bc, [1, 1, ltE0]); % x2 * x3 * time
 Vmaxx1it(:, :, 1) = zeros(llon, llat); % no forcing in first timestep

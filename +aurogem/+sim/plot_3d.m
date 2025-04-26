@@ -11,73 +11,75 @@
 %   02/28/2025  initial implementation (jvi)
 %
 
-%#ok<*UNRCH>
-
-% simulations directories
-direc_root = getenv('GEMINI_SIM_ROOT');
-% direc = fullfile(direc_root, 'swop_20230210_35487_AC_09_SD');
-% direc = fullfile(direc_root, 'swop_20230210_35487_AC_09_SD');
-% direc = fullfile(direc_root, 'swop_20230210_35487_AC_09_unacc_SD');
-% direc = fullfile(direc_root, 'swop_20230210_35487_A_09_nobg');
-sim = 'swop_20230304_27012_09_SD_AM_xC';
-direc = fullfile(direc_root, sim);
-direc_compare = ''; % when comparing tubes of two simulations
-
-% plotting parameters
+%% user input
+% sim = 'swop_20230210_35487_09_SD_AM_AC';
+% sim = 'swop_20230304_27012_09_SD_AM_xC';
+sim = 'swop_20230314_24547_09_PF_AM_AC';
+% sim = 'swop_20230319_30210_09_SD_AM_xB';
 vinds = 1:3; % view angles to plot (1=iso, 2=side, 3=top)
 spins = 0; %0:5:360; % for spinning animation (°)
 save_plot = true;
 reload_tubes = true; % when only changing plotting parameters
 reload_grid = false; % when only changing simulation data
 reload_data = false; % when only changing tube configuration
-publish_format = 'paper'; % paper or poster
-tube_list = 1:3;
+publish_format = 'paper'; % publication format (paper, poster)
+tube_list = 1:3; % list of flux tubes to plot
 debug = 0;
 
+%% main
+%#ok<*UNRCH>
 for vind = vinds
 for spin = spins
 angl = [[-30, 32]; [-90, 0]; [0, 90]]; % view angle (°)
-sffx = ["iso", "side", "top"];
+sffx = ["ISO", "SID", "TOP"];
 fntn = 'Arial'; % font name
 qntl = 0.95; % colorbar range quantile
 clbh = 0.43; % colorbar height (relative)
-clc0 = [0.0, 0.0, 0.0]; % start curve color (rgb)
-clc1 = [0.0, 0.0, 0.8]; % end curve color (rgb)
-clef = [0.0, 1.0, 1.0]; % electric field color (rgb)
-cleb = [1.0, 1.0, 0.0]; % electric field background (rgb)
-cltd = [1.0, 0.4, 1.0]; % track data color (rgb)
 stlo = 0.3; % flux tube opacity
 offs = 0.5; % projection line offset (km)
 idef = 3; % electric field legend vind (1, 3)
 lnef = 20; % length of electric field background vector (km)
-track_data_type = 'current'; % type of track data to plot
+track_data_type = 'current'; % type of track data to plot ('current', 'flow')
+
+clr.c0 = [0.0, 0.0, 0.0]; % start curve color (rgb)
+clr.c1 = [0.0, 0.0, 0.8]; % end curve color (rgb)
+clr.ef = [0.0, 1.0, 1.0]; % electric field color (rgb)
+clr.eb = [1.0, 1.0, 0.0]; % electric field background (rgb)
+clr.td = [1.0, 0.4, 1.0]; % track data color (rgb)
 
 if strcmp(publish_format, 'paper')
-    fnts = 10 * 2; % font size
+    resf = 4;
+    fnts = 10 * resf; % font size
     linw = 1.5; % line width
-    pprw = [6.5, 2.58, 3.92] * 2; % paper width (inches)
-    pprh = [5, 3.02, 3.02] * 2; % paper height (inches)
+    pprw = [6.5, 2.58, 3.92] * resf; % paper width (inches)
+    pprh = [5, 3.02, 3.02] * resf; % paper height (inches)
     clbx = 0.9; % colorbar horizontal position
-    clbg = [255, 255, 255] / 255; % background color (rgb)
-    % clbg = [221, 221, 221] / 255;
-    % clbg = [54, 54, 54] / 255;
-    cltx = [0, 0, 0]; % text color (rgb)
-    % cltx = [1, 1, 1];
     xrot = [18, 0, 0]; % x label rotation (deg)
     yrot = [-45, 0, 90]; % y label rotation (deg)
-    sffx = sffx + "-p";
+    sffx = sffx + "_P";
+
+    clr.bg = [255, 255, 255] / 255; % background color (rgb)
+    % clr.bg = [221, 221, 221] / 255;
+    % clr.bg = [54, 54, 54] / 255;
+    clr.tx = [0, 0, 0]; % text color (rgb)
+    % clr.tx = [1, 1, 1];
 else
-    fnts = 18 * 2; % font size
+    fnts = 18 * resf; % font size
     linw = 2; % line width
-    pprw = [8.5, 4, 4] * 2; % paper width (inches)
-    pprh = [7, 4, 3] * 2; % paper height (inches)
+    pprw = [8.5, 4, 4] * resf; % paper width (inches)
+    pprh = [7, 4, 3] * resf; % paper height (inches)
     clbx = 0.87; % colorbar horizontal position
-    clbg = [20, 21, 20] / 255; % background color (rgb)
-    cltx = [1, 1, 1]; % text color (rgb)
     xrot = [18, 0, 0]; % x label rotation (deg)
     yrot = [-45, 0, 90]; % y label rotation (deg)
-    % sffx = sffx + "-test";
+
+    clr.bg = [20, 21, 20] / 255; % background color (rgb)
+    clr.tx = [1, 1, 1]; % text color (rgb)
 end
+
+% simulations directories
+direc_root = getenv('GEMINI_SIM_ROOT');
+direc = fullfile(direc_root, sim);
+direc_compare = ''; % when comparing tubes of two simulations
 
 % compare tubes
 if exist(fullfile(direc_compare, 'config.nml'), 'file')
@@ -109,9 +111,9 @@ xrot = xrot(vind);
 yrot = yrot(vind);
 
 if do_compare
-    sffx = [sffx_tmp, '_compare'];
+    sffx = [sffx_tmp, '_COMPARE'];
 elseif exist('spin', 'var')
-    sffx = [sffx_tmp, '_', num2str(spin)];
+    sffx = [sffx_tmp, '_', sprintf('%03i', spin)];
 else
     sffx = sffx_tmp;
 end
@@ -213,7 +215,12 @@ E2_bg = h5read(E_bg_filename, '/Exit');
 E3_bg = h5read(E_bg_filename, '/Eyit');
 E2_bg = median(E2_bg(:)) * scl.e;
 E3_bg = median(E3_bg(:)) * scl.e;
-scl.qe = lnef / vecnorm([E2_bg, E3_bg]);
+Ebg_norm = vecnorm([E2_bg, E3_bg]);
+if Ebg_norm ~= 0
+    scl.qe = lnef / Ebg_norm;
+else
+    scl.qe = 4;
+end
 
 % generate current flux tubes
 if reload_tubes || not(exist('tubes', 'var'))
@@ -295,42 +302,42 @@ for compare = double(do_compare):-1:0
         fprintf('Tube %s: influx = %.2f %s, outflux = %.2f %s, ratio = %.2f.\n' ...
             , tube_name, flux0, unt.f, flux1, unt.f, flux0 / flux1)
         flux_string_in{k} = ['\color[rgb]{', num2str(color), '}'...
-            , num2str(flux0, '%3.2f'), '  ', '\color[rgb]{', num2str(cltx),'}'];
+            , num2str(flux0, '%3.2f'), '  ', '\color[rgb]{', num2str(clr.tx),'}'];
         flux_string_out{k} = ['\color[rgb]{', num2str(color), '}'...
-            , num2str(flux1, '%3.2f'), '  ', '\color[rgb]{', num2str(cltx),'}'];
+            , num2str(flux1, '%3.2f'), '  ', '\color[rgb]{', num2str(clr.tx),'}'];
         k = k + 1;
         
         if pars.do_reverse
-            clc0_tmp = clc1;
-            clc1_tmp = clc0;
+            clr.c0_tmp = clr.c1;
+            clr.c1_tmp = clr.c0;
         else
-            clc0_tmp = clc0;
-            clc1_tmp = clc1;
+            clr.c0_tmp = clr.c0;
+            clr.c1_tmp = clr.c1;
         end
         if compare
-            clc0_tmp = 1 - clc0_tmp;
-            clc1_tmp = 1 - clc1_tmp;
+            clr.c0_tmp = 1 - clr.c0_tmp;
+            clr.c1_tmp = 1 - clr.c1_tmp;
         end
 
         stl = streamline(verts);
         if vind == 1 && pars.do_projection
             stl_2d = streamline(verts_2d);
         end
-        plot3(c0(:, 1), c0(:, 2), c0(:, 3), 'Color', clc0_tmp);
+        plot3(c0(:, 1), c0(:, 2), c0(:, 3), 'Color', clr.c0_tmp);
         if vind == 1
-            plot3(c0(:, 1), c0(:, 2), c0(:, 3)*0+z(1)+offs, 'Color', clc0_tmp, 'LineStyle', ':');
+            plot3(c0(:, 1), c0(:, 2), c0(:, 3)*0+z(1)+offs, 'Color', clr.c0_tmp, 'LineStyle', ':');
         end
         if ~iscell(c1)
-            plot3(c1(:, 1), c1(:, 2), c1(:, 3), 'Color', clc1_tmp);
+            plot3(c1(:, 1), c1(:, 2), c1(:, 3), 'Color', clr.c1_tmp);
             if vind == 1
-                plot3(c1(:, 1), c1(:, 2), c1(:, 3)*0+z(1)+offs, 'Color', clc1_tmp, 'LineStyle', ':');
+                plot3(c1(:, 1), c1(:, 2), c1(:, 3)*0+z(1)+offs, 'Color', clr.c1_tmp, 'LineStyle', ':');
             end
         else
             for i=1:length(c1)
                 c = cell2mat(c1(i));
-                plot3(c(:, 1), c(:, 2), c(:, 3), 'Color', clc1_tmp);
+                plot3(c(:, 1), c(:, 2), c(:, 3), 'Color', clr.c1_tmp);
                 if vind == 1
-                    plot3(c(:, 1), c(:, 2), c(:, 3)*0+z(1), 'Color', clc1_tmp, 'LineStyle', ':');
+                    plot3(c(:, 1), c(:, 2), c(:, 3)*0+z(1), 'Color', clr.c1_tmp, 'LineStyle', ':');
                 end
             end
         end
@@ -351,9 +358,9 @@ if vind ~=2
     clim(axj, lim.j)
     if vind ==1
         clb = colorbar(axj);
-        clb.Color = cltx;
+        clb.Color = clr.tx;
         clb.Label.String = sprintf('j_{||} (%s)', unt.j);
-        clb.Label.Color = cltx;
+        clb.Label.Color = clr.tx;
         clb.Position = [clbx, clbh+2*(1-2*clbh)/3, 0.015, clbh];
     end
 end
@@ -366,9 +373,9 @@ if vind ~= 3
     clim(axn, lim.n)
     if vind == 1
         clb = colorbar(axn);
-        clb.Color = cltx;
+        clb.Color = clr.tx;
         clb.Label.String = sprintf('log_{10} n_e (%s)', unt.n);
-        clb.Label.Color = cltx;
+        clb.Label.Color = clr.tx;
         clb.Position = [clbx, (1-2*clbh)/3, 0.015, clbh];
     end
 end
@@ -388,7 +395,7 @@ if vind ~= 2
             vy_tmp = zeros(size(x_tmp));
             vz_tmp = zeros(size(x_tmp));
         end
-        quiver3(x_tmp, y_tmp, z_tmp, vx_tmp, vy_tmp, vz_tmp, '.-', 'Color', cltd)
+        quiver3(x_tmp, y_tmp, z_tmp, vx_tmp, vy_tmp, vz_tmp, '.-', 'Color', clr.td)
     end
 end
 
@@ -406,13 +413,21 @@ if vind ~= 2
     E2_q = E2(qy_ids, qx_ids, :) * scl.qe;
     E3_q = E3(qy_ids, qx_ids, :) * scl.qe;
     E1_q = zeros(size(E2_q)) * scl.qe;
-    quiver3(Xm_q, Ym_q, Zm_q, E2_q, E3_q, E1_q, 0, 'Color', clef, 'MaxHeadSize', 1)
-    quiver3(Xm_q(1, 1, 2), Ym_q(1, 1, 2), Zm_q(1, 1, 2), E2_bg * scl.qe, E3_bg * scl.qe, 0, 0, 'Color', cleb, 'MaxHeadSize', 1)
+    quiver3(Xm_q, Ym_q, Zm_q, E2_q, E3_q, E1_q, 0, 'Color', clr.ef, 'MaxHeadSize', 1)
+    if Ebg_norm ~= 0
+        quiver3(Xm_q(1, 1, 2), Ym_q(1, 1, 2), Zm_q(1, 1, 2), E2_bg * scl.qe, ...
+            E3_bg * scl.qe, 0, 0, 'Color', clr.eb, 'MaxHeadSize', 1)
+    end
     if vind == idef
-        % anne = vecnorm([E2_q(1, 1, 2), E3_q(1, 1, 2), E1_q(1, 1, 2)]);
-        anne = vecnorm([E2_bg, E3_bg]);
-        text(Xm_q(1, 1, 2)*1.1, Ym_q(1, 1, 2)*1.15, Zm_q(1, 1, 2)*1.02, ...
-            sprintf('%.1f %s', anne, unt.e), 'Color', cleb, 'FontSize', fnts * 0.6, ...
+        if Ebg_norm == 0
+            e_anno = vecnorm([E2_q(1, 1, 2), E3_q(1, 1, 2)]) / scl.qe;
+            cl.tmp = clr.ef;
+        else
+            e_anno = Ebg_norm;
+            cl.tmp = clr.eb;
+        end
+        text(Xm_q(1, 1, 2)*1.05, Ym_q(1, 1, 2)*1.15, Zm_q(1, 1, 2)*1.02, ...
+            sprintf('%.1f %s', e_anno, unt.e), 'Color', cl.tmp, 'FontSize', fnts * 0.6, ...
             'HorizontalAlignment', 'right', 'BackgroundColor', [0, 0, 0, 0.5])
     end
 end
@@ -423,7 +438,7 @@ if vind == 1
         'In (', unt.f, '):  ', [flux_string_in{:}], newline, ...
         'Out (', unt.f, '):  ', [flux_string_out{:}], newline, ...
         ], 'FitBoxToText', 'on', 'EdgeColor', 'none', 'BackgroundColor', 'none', ...
-        'FontSize', fnts, 'FontName', fntn, 'Color', cltx)
+        'FontSize', fnts, 'FontName', fntn, 'Color', clr.tx)
 end
 
 % adjust view positioning
@@ -442,9 +457,9 @@ camzoom(axj, zoom); camzoom(axn, zoom)
 camdolly(axj, -panx, -pany, 0); camdolly(axn, -panx, -pany, 0)
 box(axa, 'on')
 
-set(fig, 'Color', clbg, 'InvertHardcopy', 'off')
-set(axa, 'Color', 'none', 'GridColor', cltx, 'MinorGridColor', cltx, ...
-    'XColor', cltx, 'YColor', cltx, 'ZColor', cltx)
+set(fig, 'Color', clr.bg, 'InvertHardcopy', 'off')
+set(axa, 'Color', 'none', 'GridColor', clr.tx, 'MinorGridColor', clr.tx, ...
+    'XColor', clr.tx, 'YColor', clr.tx, 'ZColor', clr.tx)
 
 % save figure
 if save_plot

@@ -160,6 +160,14 @@ geod_to_x3 = scatteredInterpolant(xg.GLON(:), xg.GLAT(:), X3(:), 'natural');
 % create simulation directories
 direc_sim = fullfile(root_sim, sprintf('swop_%s_%05i_%02i%s', ...
     time, second(time, 'secondofday'), opts.sim_version, suffix));
+if exist(direc_sim, 'dir')
+    fprintf('Simulation directory exists:\n  %s\nwith contents:\n  %s\n', ...
+        direc_sim, ls(direc_sim))
+    ok = input('Continue? (y/n)', 's');
+    if not(strcmp(ok, 'y'))
+        return
+    end
+end
 direc_ext = fullfile(direc_sim, 'ext');
 direc_data = fullfile(direc_sim, 'ext', 'data');
 if not(exist(direc_data, 'dir'))

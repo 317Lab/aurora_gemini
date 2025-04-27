@@ -19,7 +19,6 @@ Ensure that ctest outputs '100% tests passed'.
 ## Manual Install
 From the directory `aurora_gemini/..`, run the following:
 ```sh
-mkdir sims
 git clone https://github.com/317Lab/gemini3d.git
 git clone https://github.com/317Lab/mat_gemini.git
 git clone https://github.com/317Lab/mat_gemini-scripts.git
@@ -34,7 +33,7 @@ ctest --test-dir build
 cd ..
 
 ```
-It is recommended to us the `sims` directory for your simulations. If you have a dedicated simulation directory already, use `ln -s <path-to-simulation-dir> sims`. Forks from github.com/gemini3d are used to allow GEMINI to output conductivity volumes and for other, minor adjustments, e.g. reading additional configuration namelists. Forks will be updated semi-regularly.
+Forks from github.com/gemini3d are used to allow GEMINI to output conductivity volumes and for other, minor adjustments, e.g. reading additional configuration namelists. Forks will be updated semi-regularly.
 
 ## Sample Simulation
 Inside `data/sample` is an example set of data required for a simulation of a Swarm-over-Poker event. To setup the sample simulation, start within MATLAB in aurora_gemini and run

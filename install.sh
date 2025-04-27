@@ -11,7 +11,6 @@
 #	exit 1
 #fi
 
-mkdir sims
 git clone https://github.com/317Lab/gemini3d.git
 git clone https://github.com/317Lab/mat_gemini.git
 git clone https://github.com/317Lab/mat_gemini-scripts.git

@@ -22,7 +22,7 @@ arguments
     direc (1, :) char {mustBeFolder}
     opts.num_cpus_per_node (1, 1) int32 {mustBePositive} = 64
     opts.num_nodes (1, 1) int32 {mustBePositive} = 1
-    opts.max_hours (1, 1) double {mustBePositive} = 5
+    opts.max_hours (1, 1) double {mustBePositive} = 20
     opts.account (1, :) char = ''
 end
 

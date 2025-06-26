@@ -8,7 +8,7 @@ end
 ignored_properties = ["Geoaxes", "Mapaxes"];
 property_suffix = char(property_suffix);
 l = length(property_suffix);
-properties = fieldnames(get(obj, 'factory'));
+properties = fieldnames(get(0, 'factory'));
 for n = 1:numel(properties)
     p = properties{n};
     if any(contains(p, ignored_properties))

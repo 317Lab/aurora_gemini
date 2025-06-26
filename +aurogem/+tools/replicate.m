@@ -29,7 +29,7 @@ arguments
     opts.do_rotate (1, 1) logical = true
     opts.do_scale (1, 1) logical = true
     opts.track_shift (1, :) double = 0
-    opts.arc_definition {mustBeMember(opts.arc_definition, ["conductance", "Pedersen", "Hall", "flux"])} = "Pedersen"
+    opts.arc_definition {mustBeMember(opts.arc_definition, ["conductance", "Pedersen", "Hall", "flux"])} = "Hall"
     opts.edge_method {mustBeMember(opts.edge_method, ["contour", "sobel"])} = "contour"
     opts.contour_values (1, 2) double = nan(1, 2)
     opts.boundary_smoothing_window (1, 1) int32 {mustBePositive} = 1
@@ -204,6 +204,8 @@ elseif strcmp(opts.arc_definition, 'flux')
     unt.arc = 'mW/m^2';
     clm.arc = 'L19';
     lbl.arc = sprintf('Total energy flux (%s)', unt.arc);
+else
+    error('unknown arc_definition')
 end
 
 %% calculate boundaries

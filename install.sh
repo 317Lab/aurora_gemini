@@ -11,6 +11,12 @@
 #	exit 1
 #fi
 
+git clone https://github.com/317Lab/glow.git
+git clone https://github.com/317Lab/asispectralinversion.git
+cd asispectralinversion/src
+pip install .
+cd ../..
+
 git clone https://github.com/317Lab/gemini3d.git
 git clone https://github.com/317Lab/mat_gemini.git
 git clone https://github.com/317Lab/mat_gemini-scripts.git

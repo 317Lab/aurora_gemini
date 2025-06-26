@@ -43,7 +43,7 @@ arguments
     opts.cam_orbit (1, 2) double = [-60, -60]
     opts.cam_zoom (1, 1) double = 8;
     opts.xg struct = struct
-    opts.swarm_file (1, :) char {mustBeFile}
+    opts.swarm_file (1, :) string
     opts.pfisr_vvels_file (1, :) char {mustBeFile}
     opts.save_plot (1, 1) logical = false
 end
@@ -51,16 +51,20 @@ end
 %% parameters
 scale = opts.scale;
 RE = 6371;
-offsets = [180, 230, -90, 340, -300, 100];
 win = 250;
-color_cities = [1, 1, 1];
-color_background = [13, 53, 18] / 255;
-color_model = [0, 0.6, 1];
-color_top = [1.0, 0.7, 0.0];
-color_bottom = [71, 212, 90] / 255;
-color_swarm = [1, 0, 0];
-color_pfisr = [1, 0, 1];
-color_sdarn = [1, 0, 1];
+% color_cities = [1, 1, 1];
+color_cities = [1, 1 ,1] * 0.4;
+% color_background = [13, 53, 18] / 255;
+color_background = [1.0, 1.0, 1.0];
+% color_model = [0, 0.8, 1];
+color_model = [0.0, 0.0, 0.0];
+% color_top = [1.0, 0.7, 0.0];
+color_top = [1.0, 0.0, 0.0];
+% color_bottom = [71, 212, 90] / 255;
+color_bottom = [0.0, 0.0, 1.0];
+color_swarm = [1.0, 0.8, 0.0];
+color_pfisr = [0.0, 0.8, 0.0];
+color_sdarn = [1.0, 0.4, 0.0];
 
 %% grid & config
 cfg = gemini3d.read.config(direc);
@@ -71,7 +75,7 @@ else
 end
 az = deg2rad(xg.glon);
 el = deg2rad(xg.glat);
-ra = xg.alt/1e3 + RE;
+ra = xg.alt / 1e3 + RE;
 [model_x, model_y, model_z] = sph2cart(az, el, ra);
 
 %% Earth
@@ -119,16 +123,22 @@ plot_swarm = false;
 if isfield(opts, 'swarm_file')
     plot_swarm = true;
     t0 = mean(cfg.times);
-    swarm_time = datetime(h5read(opts.swarm_file, '/Timestamp'), 'ConvertFrom', 'posixtime');
-    [~, swarm_id] = min(abs(swarm_time - t0));
-    swarm_ids = swarm_id + (-win:win);
-    swarm_glon = h5read(opts.swarm_file, '/Longitude');
-    swarm_glat = h5read(opts.swarm_file, '/GeodeticLatitude');
-    swarm_galt = h5read(opts.swarm_file, '/GeodeticAltitude');
-    swarm_az = deg2rad(swarm_glon(swarm_ids));
-    swarm_el = deg2rad(swarm_glat(swarm_ids));
-    swarm_ra = swarm_galt(swarm_ids)/1e3 + RE;
-    [swarm_x, swarm_y, swarm_z] = sph2cart(swarm_az, swarm_el, swarm_ra);
+    swarm_x = []; swarm_y = []; swarm_z = [];
+    for sf = opts.swarm_file
+        swarm_time = datetime(h5read(sf, '/Timestamp'), 'ConvertFrom', 'posixtime');
+        [~, swarm_id] = min(abs(swarm_time - t0));
+        swarm_ids = swarm_id + (-win:win);
+        swarm_glon = h5read(sf, '/Longitude');
+        swarm_glat = h5read(sf, '/GeodeticLatitude');
+        swarm_galt = h5read(sf, '/GeodeticAltitude');
+        swarm_az = deg2rad(swarm_glon(swarm_ids));
+        swarm_el = deg2rad(swarm_glat(swarm_ids));
+        swarm_ra = swarm_galt(swarm_ids) / 1e3 + RE;
+        [swarm_x_tmp, swarm_y_tmp, swarm_z_tmp] = sph2cart(swarm_az, swarm_el, swarm_ra);
+        swarm_x = [swarm_x, nan, swarm_x_tmp]; %#ok<*AGROW>
+        swarm_y = [swarm_y, nan, swarm_y_tmp];
+        swarm_z = [swarm_z, nan, swarm_z_tmp];
+    end
 end
 
 plot_pfisr = false;
@@ -147,37 +157,39 @@ end
 
 %% plot
 close all
-fts = 10*scale;
+fts = 7*scale;
 ftn = 'Arial';
+lnw = 1.5;
 
 reset(0)
-set(0, 'defaultFigurePaperUnits', 'inches')
 aurogem.tools.setall(0, 'FontName', ftn)
 aurogem.tools.setall(0, 'FontSize', fts)
 aurogem.tools.setall(0, 'Multiplier', 1)
 set(0, 'defaultAxesFontSizeMode', 'manual')
 set(0, 'defaultSurfaceEdgeColor', 'flat')
 
-figure
-set(gcf, 'PaperPosition', [0, 0, 6.5, 6.5]*scale)
 hold on
 axis off
-model_surf(model_x, model_y, model_z, color_model, color_bottom, color_top)
-plot3([top_x, top_x], [top_y - 50, top_y + 0.9*offsets(5)], [top_z, top_z + 160], 'Color', color_top, 'LineWidth', 1, 'LineStyle', ':')
-text(top_x, top_y + offsets(5), top_z + 200, 'Top-boundary', 'Color', color_top)
-plot3([bottom_x, bottom_x], [bottom_y, bottom_y + 0.9*offsets(6)], [bottom_z, bottom_z - 200], 'Color', color_bottom, 'LineWidth', 1, 'LineStyle', ':')
-text(bottom_x, bottom_y + offsets(6), bottom_z - 250, 'Imagery', 'Color', color_bottom, 'HorizontalAlignment', 'right')
+model_surf(model_x, model_y, model_z, color_model, color_bottom, color_top, lnw)
+plot3([mid_x, mid_x], [mid_y, mid_y + 300], [mid_z + 50, mid_z + 100], 'Color', color_model, 'LineWidth', lnw, 'LineStyle', ':')
+text(mid_x, mid_y + 670, mid_z + 120, 'Model space', 'Color', color_model)
+plot3([top_x, top_x], [top_y - 50, top_y - 270], [top_z, top_z - 100], 'Color', color_top*0.9, 'LineWidth', lnw, 'LineStyle', ':')
+text(top_x, top_y - 300, top_z - 100, 'Top-boundary', 'Color', color_top)
+plot3([bottom_x, bottom_x], [bottom_y, bottom_y + 90], [bottom_z, bottom_z - 200], 'Color', color_bottom, 'LineWidth', lnw, 'LineStyle', ':')
+text(bottom_x, bottom_y + 100, bottom_z - 230, 'DASC', 'Color', color_bottom, 'HorizontalAlignment', 'right')
 if plot_swarm
-    plot3(swarm_x, swarm_y, swarm_z, 'Color', color_swarm, 'LineWidth', 1, 'LineStyle', '-')
-    text(swarm_x(win), swarm_y(win) + offsets(3), swarm_z(win), 'Swarm', 'Color', color_swarm)
+    plot3(swarm_x, swarm_y, swarm_z, 'Color', color_swarm, 'LineWidth', lnw, 'LineStyle', '-')
+    text(swarm_x(win), swarm_y(win) - 140, swarm_z(win) - 180, 'Swarm', 'Color', color_swarm)
 end
 if plot_pfisr
-    plot3(pfisr_x, pfisr_y, pfisr_z, ...    
-        'Color', color_pfisr, 'LineWidth', 1, 'LineStyle', '-')
-    text(pfisr_x(end), pfisr_y(end) + offsets(4), pfisr_z(end), 'PFISR', 'Color', color_pfisr)
+    plot3(pfisr_x, pfisr_y, pfisr_z, ...
+        'Color', color_pfisr, 'LineWidth', lnw, 'LineStyle', '-')
+    text(pfisr_x(end), pfisr_y(end) + 240, pfisr_z(end), 'PFISR', 'Color', color_pfisr)
 end
-% quiver3(-2500, -1900, 5600, -2500 + 0.00001, -1900, 5600, 0, 'Color', color_sdarn)
-text(-2800, -1600, 5600, 'SuperDARN', 'Color', color_sdarn)
+for ii = [-1, 0, 1] * 50
+    quiver3(-2800+abs(ii), -1900+abs(ii), 5600+250+ii, 0, 100, 50, 0, '.-', 'Color', color_sdarn, 'LineWidth', lnw, 'MarkerSize', 20, 'Marker', '.')
+end
+text(-2800+500, -1600, 5600, 'SuperDARN', 'Color', color_sdarn)
 if opts.plot_earth
     surf(earth_x, earth_y, earth_z)
 else
@@ -192,28 +204,28 @@ end
 if opts.plot_cities
     scatter3(fair_x, fair_y, fair_z + 10, 50, 'filled', 'MarkerFaceColor', color_cities)
     scatter3(anch_x, anch_y, anch_z + 10, 50, 'filled', 'MarkerFaceColor', color_cities)
-    text(fair_x, fair_y + offsets(2), fair_z + 20, 'Fairbanks' ...
+    text(fair_x, fair_y + 160, fair_z + 20, 'Fairbanks' ...
         , 'Color', color_cities, 'FontSize', fts * 0.8 , 'HorizontalAlignment', 'center')
-    text(anch_x, anch_y + offsets(2) + 10, anch_z + 20, 'Anchorage' ...
+    text(anch_x, anch_y + 180, anch_z + 20, 'Anchorage' ...
         , 'Color', color_cities, 'FontSize', fts * 0.8 , 'HorizontalAlignment', 'center')
 end
 if opts.plot_altitudes
-    plot3([min_x, min_x], [min_y + 10, min_y + 0.9*offsets(1)], [min_z, min_z - 30], 'Color', color_model, 'LineWidth', 1, 'LineStyle', ':')
-    plot3([max_x, max_x], [max_y + 10, max_y + 0.9*offsets(1)], [max_z, max_z - 30], 'Color', color_model, 'LineWidth', 1, 'LineStyle', ':')
-    text(min_x, min_y + offsets(1), min_z - 40 ...
+    plot3([min_x, min_x], [min_y + 10, min_y + 160], [min_z, min_z - 30], 'Color', color_model, 'LineWidth', lnw, 'LineStyle', ':')
+    plot3([max_x, max_x], [max_y + 10, max_y + 160], [max_z, max_z - 30], 'Color', color_model, 'LineWidth', lnw, 'LineStyle', ':')
+    text(min_x, min_y + 180, min_z - 40 ...
         , sprintf('%.0f km', min(xg.alt(:))/1e3), 'Color', color_model, 'FontSize', fts ...
         , 'HorizontalAlignment', 'right')
-    text(max_x, max_y + offsets(1), max_z - 40 ...
+    text(max_x, max_y + 180, max_z - 40 ...
         , sprintf('%.0f km', max(xg.alt(:))/1e3), 'Color', color_model, 'FontSize', fts ...
         , 'HorizontalAlignment', 'right')
 end
 if opts.plot_xyz
-    plot3([mid_x, mid_x+10*offsets(1)], [mid_y, mid_y], [mid_z, mid_z], 'r')
-    plot3([mid_x, mid_x], [mid_y, mid_y+10*offsets(1)], [mid_z, mid_z], 'r')
-    plot3([mid_x, mid_x], [mid_y, mid_y], [mid_z, mid_z+10*offsets(1)], 'r')
-    text(mid_x+11*offsets(1), mid_y, mid_z, 'X', 'Color', 'r', 'FontSize', fts)
-    text(mid_x, mid_y+11*offsets(1), mid_z, 'Y', 'Color', 'r', 'FontSize', fts)
-    text(mid_x, mid_y, mid_z+11*offsets(1), 'Z', 'Color', 'r', 'FontSize', fts)
+    plot3([mid_x, mid_x + 1800], [mid_y, mid_y], [mid_z, mid_z], 'r')
+    plot3([mid_x, mid_x], [mid_y, mid_y + 1800], [mid_z, mid_z], 'r')
+    plot3([mid_x, mid_x], [mid_y, mid_y], [mid_z, mid_z + 1800], 'r')
+    text(mid_x + 1980, mid_y, mid_z, 'X', 'Color', 'r', 'FontSize', fts)
+    text(mid_x, mid_y + 1980, mid_z, 'Y', 'Color', 'r', 'FontSize', fts)
+    text(mid_x, mid_y, mid_z + 1980, 'Z', 'Color', 'r', 'FontSize', fts)
 end
 
 pbaspect([1, 1, 1])
@@ -226,22 +238,30 @@ set(gca, 'Color', 'none');
 
 if opts.save_plot
     filename = fullfile(direc, 'grid_context.png');
-    exportgraphics(gcf, filename, 'Resolution', 300, 'BackgroundColor', color_background)
+    exportgraphics(gcf, filename, 'Resolution', 96 * 2 * scale, ...
+        'BackgroundColor', color_background)
     close all
+
+    im = imread(filename);
+    crop = [150, 120, 0, 0] * scale;
+    im_crop = im(1+crop(1):end-crop(2), 1+crop(3):end-crop(4), :);
+    imwrite(im_crop, filename)
 end
 
-    function model_surf(x, y, z, c1, c2, c3)
+    function model_surf(x, y, z, c1, c2, c3, lw)
         for j = [1, size(x, 2)]
             xx = squeeze(x([1, end], j, [1, end]));
             yy = squeeze(y([1, end], j, [1, end]));
             zz = squeeze(z([1, end], j, [1, end]));
-            surf(xx, yy, zz, 'EdgeColor', 'w', 'FaceColor', c1, 'FaceAlpha', 0.5)
+            surf(xx, yy, zz, 'EdgeColor', 1-c1, 'LineWidth', lw / 3, ...
+                'FaceColor', c1, 'FaceAlpha', 0.5, 'EdgeAlpha', 1)
         end
         for k = [1, size(x, 3)]
             xx = squeeze(x([1, end], [1, end], k));
             yy = squeeze(y([1, end], [1, end], k));
             zz = squeeze(z([1, end], [1, end], k));
-            surf(xx, yy, zz, 'EdgeColor', 'w', 'FaceColor', c1, 'FaceAlpha', 0.5)
+            surf(xx, yy, zz, 'EdgeColor', 1-c1, 'LineWidth', lw / 3, ...
+                'FaceColor', c1, 'FaceAlpha', 0.5, 'EdgeAlpha', 1)
         end
         for i = [1, size(x, 1)]
             if i == 1
@@ -251,8 +271,8 @@ end
             end
             xx = squeeze(x(i, [1, end], [1, end]));
             yy = squeeze(y(i, [1, end], [1, end]));
-            zz = squeeze(z(i, [1, end], [1, end]));
-            surf(xx, yy, zz, 'EdgeColor', cc, 'FaceColor', cc, 'FaceAlpha', 0.5)
+            zz = squeeze(z(i, [1, end], [1, end])) + 1;
+            surf(xx, yy, zz, 'EdgeColor', cc, 'LineWidth', lw, 'FaceColor', cc, 'FaceAlpha', 0.5)
         end
     end
 

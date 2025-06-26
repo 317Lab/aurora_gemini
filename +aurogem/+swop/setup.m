@@ -15,7 +15,7 @@
 %
 function setup(data_direc, event_id, swarm_ids, opts)
 arguments
-    data_direc (1, :) char {mustBeFolder}
+    data_direc (1, :) char {mustBeFile}
     event_id (1, 1) int32 {mustBeNonnegative}
     swarm_ids (1, :) char {mustBeNonempty}
     opts.sim_version (1, 1) int32 {mustBeNonnegative} = 9
@@ -68,7 +68,6 @@ grd.base.lyp = 400;
 
 %% init
 assert(not(ispc), 'Please run in Linux environment.')
-% data_direc = fullfile(getenv('AUROGEM_ROOT'), 'data', 'swop');
 root_sim = getenv('GEMINI_SIM_ROOT');
 assert(~isempty(root_sim), ...
     'Add environment variable GEMINI_SIM_ROOT directing to gemini simulations')
@@ -104,9 +103,11 @@ else
     error('background_flow_source not found.')
 end
 
-events = readlines(fullfile(data_direc, 'event_data.txt'));
-event_titles = strsplit(events(1));
-for e = events(1:end-1)'
+events = readlines(fullfile(data_direc, 'events.dat'));
+events_ids = find(startsWith(events, "------------"));
+event_titles = strsplit(events(events_ids(1) + 1));
+event = struct;
+for e = events(events_ids(1):events_ids(2))'
     tmp = strsplit(e);
     if str2double(tmp{1}) == event_id
         for t = 1:length(event_titles)
@@ -115,6 +116,7 @@ for e = events(1:end-1)'
         break
     end
 end
+assert(~isempty(fieldnames(event)), 'Event ID %i not found.', event_id)
 
 if isempty(opts.boundary_sim)
     rep.boundary_directory = filesep;
@@ -308,7 +310,8 @@ for sat = swarm_ids
             efi_fn = fullfile(direc_data, f{1});
         end
     end
-    
+    assert(contains([h5info(efi_fn).Datasets.Name], 'ViMagE'), 'Please run append_apex_data.py in swarm hdf5 data directory.')
+
     fprintf('Preparing tracks ...\n')
 
     fac_time = datetime(h5read(fac_fn, '/Timestamp'), 'ConvertFrom', 'posixtime');

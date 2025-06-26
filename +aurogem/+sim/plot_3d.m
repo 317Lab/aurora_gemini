@@ -9,22 +9,61 @@
 %
 % Revisions:
 %   02/28/2025  initial implementation (jvi)
+%   04/26/2025  allow for start and end splits and kinks (jvi)
 %
 
 %% user input
-% sim = 'swop_20230210_35487_09_SD_AM_AC';
-% sim = 'swop_20230304_27012_09_SD_AM_xC';
-sim = 'swop_20230314_24547_09_PF_AM_AC';
-% sim = 'swop_20230319_30210_09_SD_AM_xB';
-vinds = 1:3; % view angles to plot (1=iso, 2=side, 3=top)
+sims = [...
+"swop_20230210_35487_09_SD_AM_AC", ... #1
+"swop_20230210_35487_09_PF_AM_AC", ... #2
+"swop_20230210_35487_09_SD_UM_AC", ... #3
+"swop_20230210_35487_09_SD_AM_xA", ... #4
+...
+"swop_20230212_37331_09_SD_AM_xC", ... #5
+"swop_20230212_37331_09_PF_AM_xC", ... #6
+"swop_20230212_37331_09_SD_UM_xC", ... #7
+...
+"swop_20230304_27012_09_SD_AM_xC", ... #8
+"swop_20230304_27012_09_NB_AM_xC", ... #9
+"swop_20230304_27012_09_SD_UM_xC", ... #10
+...
+"swop_20230304_36829_09_SD_AM_xB", ... #11
+"swop_20230304_36829_09_SD_UM_xB", ... #12
+...
+"swop_20230314_24547_09_SD_AM_AC", ... #13
+"swop_20230314_24547_09_PF_AM_AC", ... #14
+"swop_20230314_24547_09_SD_AM_xA", ... #15
+...
+"swop_20230319_30210_09_SD_AM_xB", ... #16
+"swop_20230319_30210_09_PF_AM_xB", ... #17
+];
+
+tube_sets = num2cell(ones(1, 17));
+tube_sets{1} = [1, 2];
+tube_sets{4} = 2;
+num_tube_sets = numel([tube_sets{:}]);
+tind = 0;
+
+for sim_ind = 1
+% clear('dat', 'xg')
+sim = char(sims(sim_ind));
+sim_compare = '';
+% sim_compare = char(sims(4)); % when comparing tubes of two simulations
+
+vinds = 1; % view angles to plot (1=iso, 2=side, 3=top)
 spins = 0; %0:5:360; % for spinning animation (°)
-save_plot = true;
+save_plot = 0;
 reload_tubes = true; % when only changing plotting parameters
 reload_grid = false; % when only changing simulation data
 reload_data = false; % when only changing tube configuration
 publish_format = 'paper'; % publication format (paper, poster)
-tube_list = 1:3; % list of flux tubes to plot
+tube_set = tube_sets{sim_ind};
+for tube_set_ind = tube_set
+tic
+tube_list = (1:3) + (tube_set_ind-1)*3; % list of flux tubes to plot
 debug = 0;
+do_contours = 0;
+additional_sffx = num2str(tube_set_ind);
 
 %% main
 %#ok<*UNRCH>
@@ -35,22 +74,22 @@ sffx = ["ISO", "SID", "TOP"];
 fntn = 'Arial'; % font name
 qntl = 0.95; % colorbar range quantile
 clbh = 0.43; % colorbar height (relative)
-stlo = 0.3; % flux tube opacity
+stlo = 0.3 * (1 - debug); % flux tube opacity
 offs = 0.5; % projection line offset (km)
 idef = 3; % electric field legend vind (1, 3)
 lnef = 20; % length of electric field background vector (km)
 track_data_type = 'current'; % type of track data to plot ('current', 'flow')
 
 clr.c0 = [0.0, 0.0, 0.0]; % start curve color (rgb)
-clr.c1 = [0.0, 0.0, 0.8]; % end curve color (rgb)
-clr.ef = [0.0, 1.0, 1.0]; % electric field color (rgb)
+clr.c1 = [0.0, 0.0, 0.0]; % end curve color (rgb)
+clr.ef = [0.0, 0.0, 0.0]; % electric field color (rgb)
 clr.eb = [1.0, 1.0, 0.0]; % electric field background (rgb)
 clr.td = [1.0, 0.4, 1.0]; % track data color (rgb)
 
 if strcmp(publish_format, 'paper')
     resf = 4;
     fnts = 10 * resf; % font size
-    linw = 1.5; % line width
+    linw = 2; % line width
     pprw = [6.5, 2.58, 3.92] * resf; % paper width (inches)
     pprh = [5, 3.02, 3.02] * resf; % paper height (inches)
     clbx = 0.9; % colorbar horizontal position
@@ -79,7 +118,7 @@ end
 % simulations directories
 direc_root = getenv('GEMINI_SIM_ROOT');
 direc = fullfile(direc_root, sim);
-direc_compare = ''; % when comparing tubes of two simulations
+direc_compare = fullfile(direc_root, sim_compare);
 
 % compare tubes
 if exist(fullfile(direc_compare, 'config.nml'), 'file')
@@ -132,8 +171,9 @@ sats = strrep(sats{8}, 'x', '');
 
 cfg = gemini3d.read.config(direc);
 if not(exist('xg', 'var')) || reload_grid
-    xg = gemini3d.read.grid(direc);
-    xg = aurogem.tools.shrink(xg);
+    % xg = gemini3d.read.grid(direc);
+    % xg = aurogem.tools.shrink(xg);
+    xg = aurogem.grid.read(direc);
 end
 fprintf('Simulation grid loaded.\n')
 
@@ -179,7 +219,6 @@ dx = xg.dx2h(lbx:ubx) * scl.x;
 dy = xg.dx3h(lby:uby) * scl.x;
 dz = xg.dx1h(lbz:ubz) * scl.x;
 [Xm, Ym, Zm] = meshgrid(x, y, z);
-[dXm, dYm] = meshgrid(dx, dy);
 Bmag = mean(xg.Bmag(:));
 
 if any(isnan(base.ar))
@@ -200,7 +239,6 @@ end
 
 % unpack data
 j1 = squeeze(dat.J1(ubz, lbx:ubx, lby:uby))'*scl.j; % A/km^2 = uA/m^2
-j2 = squeeze(dat.J2(lbz:ubz, length(x)/2, lby:uby))'*scl.j; % A/km^2 = uA/m^2
 ne = log10(squeeze(dat.ne(lbz:ubz, length(x)/2, lby:uby))')*scl.n; % m^-3
 v2 = permute(squeeze(dat.v2(ubz-1:ubz, lbx:ubx, lby:uby)), [3, 2, 1])*scl.v; % km/s
 v3 = permute(squeeze(dat.v3(ubz-1:ubz, lbx:ubx, lby:uby)), [3, 2, 1])*scl.v; % km/s
@@ -231,9 +269,21 @@ if reload_tubes || not(exist('tubes', 'var'))
             tube_pars.(tube_name), xlims = lim.x, ylims = lim.y, zlims = lim.z, debug=debug);
         if do_compare
             tubes_compare.(tube_name) = aurogem.tools.current_flux_tube(xg, dat_compare, ...
-                tube_pars.(tube_name), xlims = lim.x, ylims = lim.y, zlims = lim.z);
+                tube_pars.(tube_name), xlims = lim.x, ylims = lim.y, zlims = lim.z, debug=debug);
         end
     end
+end
+
+if debug
+    [~, xid] = min(abs(x-median(tubes.(tp{1}).caps.start(:, 1))));
+    j2 = squeeze(dat.J2(lbz:ubz, xid, lby:uby))'*scl.j; % A/km^2 = uA/m^2
+    [~, peak_z_id] = max(max(abs(j2)));
+    [~, peak_y_id] = max(abs(j2(:, peak_z_id)));
+    peak_j2 = j2(peak_y_id, peak_z_id);
+    fprintf('Peak j2 of %.0f %s at (x, y, z) = (%.0f, %.0f, %.0f) %s\n', ...
+        peak_j2, unt.j, x(xid), y(peak_y_id), z(peak_z_id), unt.x)
+    ne = j2;
+    lim.n = [-1, 1]*abs(peak_j2);
 end
 
 %% plotting
@@ -297,8 +347,6 @@ for compare = double(do_compare):-1:0
         end
         flux0 = tube.flux.in*scl.f;
         flux1 = tube.flux.out*scl.f;
-        outline = tube.outline;
-        inline = tube.inline;
         fprintf('Tube %s: influx = %.2f %s, outflux = %.2f %s, ratio = %.2f.\n' ...
             , tube_name, flux0, unt.f, flux1, unt.f, flux0 / flux1)
         flux_string_in{k} = ['\color[rgb]{', num2str(color), '}'...
@@ -306,38 +354,36 @@ for compare = double(do_compare):-1:0
         flux_string_out{k} = ['\color[rgb]{', num2str(color), '}'...
             , num2str(flux1, '%3.2f'), '  ', '\color[rgb]{', num2str(clr.tx),'}'];
         k = k + 1;
-        
-        if pars.do_reverse
-            clr.c0_tmp = clr.c1;
-            clr.c1_tmp = clr.c0;
-        else
-            clr.c0_tmp = clr.c0;
-            clr.c1_tmp = clr.c1;
-        end
-        if compare
-            clr.c0_tmp = 1 - clr.c0_tmp;
-            clr.c1_tmp = 1 - clr.c1_tmp;
-        end
 
         stl = streamline(verts);
         if vind == 1 && pars.do_projection
             stl_2d = streamline(verts_2d);
         end
-        plot3(c0(:, 1), c0(:, 2), c0(:, 3), 'Color', clr.c0_tmp);
-        if vind == 1
-            plot3(c0(:, 1), c0(:, 2), c0(:, 3)*0+z(1)+offs, 'Color', clr.c0_tmp, 'LineStyle', ':');
-        end
-        if ~iscell(c1)
-            plot3(c1(:, 1), c1(:, 2), c1(:, 3), 'Color', clr.c1_tmp);
-            if vind == 1
-                plot3(c1(:, 1), c1(:, 2), c1(:, 3)*0+z(1)+offs, 'Color', clr.c1_tmp, 'LineStyle', ':');
+        cs = {c0, c1};
+        for i = 1:2
+            c = cs{i};
+            if i == 1
+                clr.tmp = clr.c0;
+                lnwc = linw * 2;
+            else
+                clr.tmp = clr.c1;
+                lnwc = linw;
             end
-        else
-            for i=1:length(c1)
-                c = cell2mat(c1(i));
-                plot3(c(:, 1), c(:, 2), c(:, 3), 'Color', clr.c1_tmp);
+            if compare
+                clr.tmp = 1-clr.tmp;
+            end
+            if ~iscell(c)
+                plot3(c(:, 1), c(:, 2), c(:, 3), 'Color', clr.tmp, 'LineWidth', lnwc);
                 if vind == 1
-                    plot3(c(:, 1), c(:, 2), c(:, 3)*0+z(1), 'Color', clr.c1_tmp, 'LineStyle', ':');
+                    plot3(c(:, 1), c(:, 2), c(:, 3)*0+z(1)+offs, 'Color', clr.tmp, 'LineStyle', ':');
+                end
+            else
+                for j=1:length(c)
+                    cc = cell2mat(c(j));
+                    plot3(cc(:, 1), cc(:, 2), cc(:, 3), 'Color', clr.tmp, 'LineWidth', lnwc);
+                    if vind == 1
+                        plot3(cc(:, 1), cc(:, 2), cc(:, 3)*0+z(1), 'Color', clr.tmp, 'LineStyle', ':');
+                    end
                 end
             end
         end
@@ -349,7 +395,7 @@ for compare = double(do_compare):-1:0
 end
 
 % field-aligned current slice
-if vind ~=2
+if vind ~= 2
     j1_tmp = j1;
     j1_tmp(in | out) = j1(in | out) / 2;
     j1_slice = repmat(j1_tmp, [1, 1, length(z)]);
@@ -378,6 +424,26 @@ if vind ~= 3
         clb.Label.Color = clr.tx;
         clb.Position = [clbx, (1-2*clbh)/3, 0.015, clbh];
     end
+end
+
+if do_contours > 0 && vind ~= 2
+    % precip_file = fullfile(direc, cfg.prec_dir, ...
+    %     gemini3d.datelab(cfg.times(end)) + ".h5");
+    % Qp = h5read(precip_file, '/E0p');
+    % Qp = Qp(lbx:ubx, lby:uby);
+    [X, Y] = ndgrid(x, y);
+    [~, zid] = min(abs(z - 110));
+    ne_contour = log10(squeeze(dat.ne(zid, lbx:ubx, lby:uby))) * scl.n;
+    iso_value = quantile(ne_contour(:), 0.7);
+    ctrs = contour3(axn, X, Y, ne_contour, [1, 1] * 10.7);
+    ctr_id = 1;
+    while ctr_id < length(ctrs)
+        ctr_len = ctrs(2, ctr_id);
+        ctrs(:, ctr_id) = nan(2, 1);
+        ctr_id = ctr_id + ctr_len + 1;
+    end
+    plot3(axn, ctrs(1, :), ctrs(2, :), ones(size(ctrs(1, :))) * min(z) * 1.1...
+        , '--k')
 end
 
 % track data
@@ -415,7 +481,7 @@ if vind ~= 2
     E1_q = zeros(size(E2_q)) * scl.qe;
     quiver3(Xm_q, Ym_q, Zm_q, E2_q, E3_q, E1_q, 0, 'Color', clr.ef, 'MaxHeadSize', 1)
     if Ebg_norm ~= 0
-        quiver3(Xm_q(1, 1, 2), Ym_q(1, 1, 2), Zm_q(1, 1, 2), E2_bg * scl.qe, ...
+        quiver3(Xm_q(1, 1, 2), Ym_q(1, 1, 2), Zm_q(1, 1, 2) + 1, E2_bg * scl.qe, ...
             E3_bg * scl.qe, 0, 0, 'Color', clr.eb, 'MaxHeadSize', 1)
     end
     if vind == idef
@@ -428,7 +494,7 @@ if vind ~= 2
         end
         text(Xm_q(1, 1, 2)*1.05, Ym_q(1, 1, 2)*1.15, Zm_q(1, 1, 2)*1.02, ...
             sprintf('%.1f %s', e_anno, unt.e), 'Color', cl.tmp, 'FontSize', fnts * 0.6, ...
-            'HorizontalAlignment', 'right', 'BackgroundColor', [0, 0, 0, 0.5])
+            'HorizontalAlignment', 'right', 'BackgroundColor', [[0, 0, 0] + ~Ebg_norm, 0.5])
     end
 end
 
@@ -464,15 +530,26 @@ set(axa, 'Color', 'none', 'GridColor', clr.tx, 'MinorGridColor', clr.tx, ...
 % save figure
 if save_plot
     [~, filename_tmp] = fileparts(direc);
-    if ~isempty(sffx)
-        filename = [filename_tmp, '_', char(sffx), '.png'];
-    else
-        filename = [filename_tmp, '.png'];
+    filename = [filename_tmp, '_', char(sffx), '.png'];
+    if ~isempty(additional_sffx)
+        filename = [filename(1:end-4), '_', additional_sffx, '.png'];
     end
     filename = fullfile(direc, 'plots3d', filename);
     fprintf('Saving %s\n', filename)
     print(fig, filename, '-dpng', '-r96');
     close all
 end
+
+end % spin
+end % vind
+tnow = toc;
+if tind == 0
+    tavg = tnow;
+else
+    tavg = (tavg * tind + tnow) / (tind + 1);
 end
-end
+trem = (num_tube_sets - tind - 1) * tavg;
+tind = tind + 1;
+fprintf('------------------- sim_ind = %i, tube_set_ind = %i, %.1f minutes remaining -------------------\n', sim_ind, tube_set_ind, trem / 60)
+end % tube_set_ind
+end % sim_ind

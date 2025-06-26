@@ -119,6 +119,8 @@ if isfield(cfg, 'boundary_directory')
         boundaries = nan(2, 2, size(bound_prim, 2));
         boundaries(1, :, :) = bound_prim;
         boundaries(2, :, :) = bound_scnd;
+    else
+        error('No boundary files found in %s.', file_bound)
     end
 end
 

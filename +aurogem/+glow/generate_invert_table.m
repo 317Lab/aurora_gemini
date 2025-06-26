@@ -10,15 +10,18 @@ arguments
 end
 
 assert(not(ispc), 'Please run this function in a Linux environment.')
+root_glow = getenv('GLOW_ROOT');
+assert(~isempty(root_glow), ...
+    'Add environment variable GLOW_ROOT directing to contents of https://github.com/317Lab/glow')
 
 ver = sprintf('v%i', opts.version);
-in_filename = jules.glow.generate_input(date, glat, glon, ...
+in_filename = aurogem.glow.generate_input(root_glow, date, glat, glon, ...
     do_acc=opts.do_acc, thermal_energy_ev=opts.thermal_energy_ev);
-in_path = fullfile('input', in_filename);
+in_path = fullfile(root_glow, 'input', in_filename);
 
 for airglow = [true, false]
 
-    glow_out_path = fullfile('glow', 'output', ver);
+    glow_out_path = fullfile(root_glow, 'output', ver);
     tmp = strsplit(in_filename, '.');
     if strcmp(opts.out_direc, '.')
         out_direc = fullfile(glow_out_path, tmp{3});
@@ -35,7 +38,7 @@ for airglow = [true, false]
     if ~isfolder(out_direc)
         mkdir(out_direc)
     end
-    copyfile(fullfile('glow', in_path), out_direc, 'f')
+    copyfile(in_path, out_direc, 'f')
 
     if airglow
         fprintf('Generating airglow inversion value.\n')
@@ -44,7 +47,7 @@ for airglow = [true, false]
         fprintf('Generating inversion tables.\n')
         command = fullfile('.', sprintf('glow_invert_tables_%s.exe < %s', ver, in_path));
     end
-    system(sprintf('cd glow; %s', command));
+    system(sprintf('cd %s; %s', root_glow, command));
     
     bins = {dir(fullfile(glow_out_path, '*.bin')).name};
     for bin = bins

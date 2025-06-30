@@ -1,5 +1,6 @@
 data/init/
 data/swop/
+plots/
 .DS_Store
 *.asv
 *.db

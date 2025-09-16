@@ -32,7 +32,7 @@ function images2video(direc,img_direc,ext,options)
     
     ext = char(ext);
     path = fullfile(direc,img_direc);
-    img_names = dir(fullfile(path,['*.',options.img_ext]));
+    img_names = dir(fullfile(path,['*',options.img_ext]));
     if length(img_names) < 2
         error(['Fewer than 2 image files with extension ',options.img_ext,' in ',path,'.'])
     end

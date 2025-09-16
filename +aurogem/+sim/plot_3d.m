@@ -44,19 +44,19 @@ tube_sets{4} = 2;
 num_tube_sets = numel([tube_sets{:}]);
 tind = 0;
 
-for sim_ind = 1
-% clear('dat', 'xg')
+for sim_ind = 9
+clear('dat', 'xg')
 sim = char(sims(sim_ind));
 sim_compare = '';
 % sim_compare = char(sims(4)); % when comparing tubes of two simulations
 
 vinds = 1; % view angles to plot (1=iso, 2=side, 3=top)
-spins = 0; %0:5:360; % for spinning animation (°)
+spins = 0; %0:1:360; % for spinning animation (°)
 save_plot = 0;
 reload_tubes = true; % when only changing plotting parameters
 reload_grid = false; % when only changing simulation data
 reload_data = false; % when only changing tube configuration
-publish_format = 'paper'; % publication format (paper, poster)
+publish_format = 'slides'; % publication format (paper, poster)
 tube_set = tube_sets{sim_ind};
 for tube_set_ind = tube_set
 tic
@@ -76,7 +76,7 @@ qntl = 0.95; % colorbar range quantile
 clbh = 0.43; % colorbar height (relative)
 stlo = 0.3 * (1 - debug); % flux tube opacity
 offs = 0.5; % projection line offset (km)
-idef = 3; % electric field legend vind (1, 3)
+idef = 1; % electric field legend vind (1, 3)
 lnef = 20; % length of electric field background vector (km)
 track_data_type = 'current'; % type of track data to plot ('current', 'flow')
 
@@ -100,9 +100,11 @@ if strcmp(publish_format, 'paper')
     clr.bg = [255, 255, 255] / 255; % background color (rgb)
     % clr.bg = [221, 221, 221] / 255;
     % clr.bg = [54, 54, 54] / 255;
-    clr.tx = [0, 0, 0]; % text color (rgb)
-    % clr.tx = [1, 1, 1];
+    clr.bg = [0, 105, 62] / 255;
+    % clr.tx = [0, 0, 0]; % text color (rgb)
+    clr.tx = [1, 1, 1];
 else
+    resf = 4;
     fnts = 18 * resf; % font size
     linw = 2; % line width
     pprw = [8.5, 4, 4] * resf; % paper width (inches)

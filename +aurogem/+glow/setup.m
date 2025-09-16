@@ -1,21 +1,25 @@
-function setup(data_direc)
+function setup(data_direc, opts)
 arguments
-    data_direc (1, :) char {mustBeFile}
+    data_direc (1, :) char {mustBeFolder}
+    opts.glat (1, 1) double = 65.12
+    opts.glon (1, 1) double = 212.8
+    opts.out_direc (1, :) char = ''
+end
+
+if isempty(opts.out_direc)
+    out_direc = fullfile(data_direc, 'dasc', 'glow');
+else
+    out_direc = opts.out_direc;
+end
+if not(exist('out_direc', 'dir'))
+    mkdir(out_direc)
 end
 
 events = readlines(fullfile(data_direc, 'events.dat'));
 events_ids = find(startsWith(events, "------------"));
-event_titles = strsplit(events(events_ids(1) + 1));
-event = struct;
-for e = events(events_ids(1):events_ids(2))'
+for e = events(events_ids(1)+2:events_ids(2)-1)'
     tmp = strsplit(e);
-    if str2double(tmp{1}) == event_id
-        for t = 1:length(event_titles)
-            event.(event_titles(t)) = tmp{t};
-        end
-        break
-    end
+    time = datetime(tmp{2}, 'InputFormat', 'uuuu-MM-dd''T''HH:mm:ss''Z');
+    aurogem.glow.generate_invert_table(time, opts.glat, opts.glon, out_direc=out_direc)
 end
-
-aurogem.glow.generate_invert_table(datetime(2023,2,10,9,51,27), 65.12, 212.8, out_direc='data/swop/dasc/glow')
 end

@@ -46,25 +46,34 @@ arguments
     opts.swarm_file (1, :) string
     opts.pfisr_vvels_file (1, :) char {mustBeFile}
     opts.save_plot (1, 1) logical = false
+    opts.suffix (1, :) char = ''
 end
 
 %% parameters
 scale = opts.scale;
 RE = 6371;
 win = 250;
-% color_cities = [1, 1, 1];
-color_cities = [1, 1 ,1] * 0.4;
+% crop = [150, 120, 0, 0] * scale;
+crop = [0, 0, 0, 0];
+
+color_cities = [1.0, 1.0, 1.0];
+% color_cities = [1, 1 ,1] * 0.4;
 % color_background = [13, 53, 18] / 255;
-color_background = [1.0, 1.0, 1.0];
+color_background = [8, 79, 106] / 255;
+% color_background = [1.0, 1.0, 1.0];
 % color_model = [0, 0.8, 1];
-color_model = [0.0, 0.0, 0.0];
+% color_model = [0.0, 0.0, 0.0];
+color_model = [1.0, 1.0, 1.0];
 % color_top = [1.0, 0.7, 0.0];
 color_top = [1.0, 0.0, 0.0];
 % color_bottom = [71, 212, 90] / 255;
-color_bottom = [0.0, 0.0, 1.0];
+% color_bottom = [0.0, 0.0, 1.0];
+color_bottom = [0.0, 0.5, 1.0];
 color_swarm = [1.0, 0.8, 0.0];
 color_pfisr = [0.0, 0.8, 0.0];
 color_sdarn = [1.0, 0.4, 0.0];
+% color_map = [1, 1, 1]*0.5;
+color_map = [1.0, 1.0, 1.0];
 
 %% grid & config
 cfg = gemini3d.read.config(direc);
@@ -77,6 +86,11 @@ az = deg2rad(xg.glon);
 el = deg2rad(xg.glat);
 ra = xg.alt / 1e3 + RE;
 [model_x, model_y, model_z] = sph2cart(az, el, ra);
+
+sffx = char(opts.suffix);
+if not(isempty(sffx)) && not(strcmp(sffx(1), '_'))
+    sffx = ['_', sffx];
+end
 
 %% Earth
 [earth_x, earth_y, earth_z] = sphere(50);
@@ -172,7 +186,7 @@ hold on
 axis off
 model_surf(model_x, model_y, model_z, color_model, color_bottom, color_top, lnw)
 plot3([mid_x, mid_x], [mid_y, mid_y + 300], [mid_z + 50, mid_z + 100], 'Color', color_model, 'LineWidth', lnw, 'LineStyle', ':')
-text(mid_x, mid_y + 670, mid_z + 120, 'Model space', 'Color', color_model)
+text(mid_x, mid_y + 670 + 100, mid_z + 120, 'Model space', 'Color', color_model)
 plot3([top_x, top_x], [top_y - 50, top_y - 270], [top_z, top_z - 100], 'Color', color_top*0.9, 'LineWidth', lnw, 'LineStyle', ':')
 text(top_x, top_y - 300, top_z - 100, 'Top-boundary', 'Color', color_top)
 plot3([bottom_x, bottom_x], [bottom_y, bottom_y + 90], [bottom_z, bottom_z - 200], 'Color', color_bottom, 'LineWidth', lnw, 'LineStyle', ':')
@@ -196,10 +210,10 @@ else
     surf(earth_x, earth_y, earth_z, 'FaceColor', 'none', 'EdgeColor', 'none')
 end
 if opts.plot_alaska
-    plot3(map_usa_x, map_usa_y, map_usa_z, 'Color', [1, 1, 1]*0.5)
+    plot3(map_usa_x, map_usa_y, map_usa_z, 'Color', color_map)
 end
 if opts.plot_canada
-    plot3(map_cad_x, map_cad_y, map_cad_z, 'Color', [1, 1, 1]*0.5)
+    plot3(map_cad_x, map_cad_y, map_cad_z, 'Color', color_map)
 end
 if opts.plot_cities
     scatter3(fair_x, fair_y, fair_z + 10, 50, 'filled', 'MarkerFaceColor', color_cities)
@@ -237,13 +251,12 @@ set(gcf, 'Color', 'none');
 set(gca, 'Color', 'none');
 
 if opts.save_plot
-    filename = fullfile(direc, 'grid_context.png');
+    filename = fullfile(direc, sprintf('grid_context%s.png', sffx));
     exportgraphics(gcf, filename, 'Resolution', 96 * 2 * scale, ...
         'BackgroundColor', color_background)
     close all
 
     im = imread(filename);
-    crop = [150, 120, 0, 0] * scale;
     im_crop = im(1+crop(1):end-crop(2), 1+crop(3):end-crop(4), :);
     imwrite(im_crop, filename)
 end
